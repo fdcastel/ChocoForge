@@ -7,7 +7,7 @@ Describe 'Get-GitHubReleases' {
     }
 
     It 'Returns releases for repository' {
-        $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird' -Verbose
+        $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
         Write-VerboseMark -Message "Releases retrieved: $($releases.Count)"
         $releases | ConvertTo-Json -depth 20 | Out-File c:\temp\t.json
     }

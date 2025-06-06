@@ -12,29 +12,30 @@ function Get-GitHubReleases {
 
     try {
         $headers = @{ 'User-Agent' = 'ChocoForge-Module' }
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-        Write-VerboseMark -Message "Received $($response.Count) releases from GitHub API. Filtering output."
-
-        $filtered = foreach ($release in $response) {
-            [PSCustomObject]@{
-                html_url     = $release.html_url
-                tag_name     = $release.tag_name
-                name         = $release.name
-                prerelease   = $release.prerelease
-                published_at = $release.published_at
-                assets       = @($release.assets | ForEach-Object {
-                    [PSCustomObject]@{
-                        name                 = $_.name
-                        size                 = $_.size
-                        digest               = $_.digest
-                        browser_download_url = $_.browser_download_url
-                    }
-                })
-            }
+            
+        # Uses GitHub access token from environment variable if available
+        [string]$githubAccessToken = $env:GITHUB_ACCESS_TOKEN
+        if ($githubAccessToken) {
+            Write-VerboseMark "- Using authenticated GitHub API requests"
+            $headers['Authorization'] = "Bearer $githubToken"
         }
-        return $filtered
+
+        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+        Write-VerboseMark -Message "- Received $($response.Count) releases from GitHub API."
+
+        $result = $response | Select-Object `
+            'html_url',
+            'tag_name',
+            'name',
+            'prerelease',
+            'published_at',
+            @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
+        return $result
     } catch {
-        Write-VerboseMark -Message "Failed to query GitHub API: $($_.Exception.Message)"
-        return $null
+        [string]$errorMessage = $_.Exception.Message
+        if ($errorMessage -like "*rate limit*") {
+            Write-Warning "GitHub API rate limit exceeded. Please wait and try again later, or set GITHUB_ACCESS_TOKEN environment variable to increase rate limits."
+        } 
+        throw "Failed to fetch GitHub releases for '$($uri): $errorMessage"
     }
 }

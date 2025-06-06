@@ -21,6 +21,12 @@ Describe 'Select-ObjectLike' {
                         size = 23030688
                         digest = $null
                         browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.2/Firebird-5.0.2.1613-0-android-arm32.tar.gz'
+                    },
+                    [PSCustomObject]@{
+                        name = 'Firebird-5.0.2.1613-0-android-arm64-large.tar.gz'
+                        size = 150000000
+                        digest = $null
+                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.2/Firebird-5.0.2.1613-0-android-arm64-large.tar.gz'
                     }
                 )
             },
@@ -54,23 +60,30 @@ Describe 'Select-ObjectLike' {
         $filter = @{ tag_name = 'v5.0.2' }
         $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
         $result | Should -Not -BeNullOrEmpty
-        $result.tag_name | Should -Contain 'v5.0.2'
+        foreach ($r in $result) {
+            $r.tag_name | Should -Be 'v5.0.2'
+        }
+        ($result.tag_name | Where-Object { $_ -ne 'v5.0.2' }) | Should -BeNullOrEmpty
     }
 
     It 'Filters by prerelease false' {
         $filter = @{ prerelease = $false }
         $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
         $result | Should -Not -BeNullOrEmpty
-        ($result.prerelease | Select-Object -Unique) | Should -Be $false
+        foreach ($r in $result) {
+            $r.prerelease | Should -Be $false
+        }
+        ($result.prerelease | Where-Object { $_ -ne $false }) | Should -BeNullOrEmpty
     }
 
     It 'Filters by published_at greater than a date' {
-        $filter = @{ published_at = @{ op = '>' ; value = '2025-01-01' } }
+        $filter = @{ published_at = @{ op = 'gt'; value = '2025-01-01' } }
         $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
         $result | Should -Not -BeNullOrEmpty
         foreach ($r in $result) {
             ([datetime]$r.published_at) | Should -BeGreaterThan ([datetime]'2025-01-01')
         }
+        ($result.published_at | Where-Object { [datetime]$_ -le [datetime]'2025-01-01' }) | Should -BeNullOrEmpty
     }
 
     It 'Filters by asset name (exact match)' {
@@ -80,24 +93,31 @@ Describe 'Select-ObjectLike' {
         foreach ($r in $result) {
             ($r.assets.name | Select-Object -Unique) | Should -Contain 'Firebird-5.0.2.1613-0-android-arm32.tar.gz'
         }
+        foreach ($r in $result) {
+            ($r.assets | Where-Object { $_.name -eq 'Firebird-5.0.2.1613-0-android-arm32.tar.gz' }) | Should -Not -BeNullOrEmpty
+        }
     }
 
     It 'Filters by asset size greater than 100MB' {
-        $filter = @{ assets = @{ size = @{ op = '>' ; value = 100000000 } } }
+        $filter = @{ assets = @{ size = @{ op = 'gt'; value = 100000000 } } }
         $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
         $result | Should -Not -BeNullOrEmpty
         foreach ($r in $result) {
             ($r.assets.size | Where-Object { $_ -gt 100000000 }) | Should -Not -BeNullOrEmpty
         }
+        foreach ($r in $result) {
+            ($r.assets | Where-Object { $_.size -gt 100000000 }) | Should -Not -BeNullOrEmpty
+        }
     }
 
     It 'Filters by regex on tag_name' {
-        $filter = @{ tag_name = 're:^v5\\.' }
+        $filter = @{ tag_name = @{ op = 'match'; value = '^v5\.' } }
         $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
         $result | Should -Not -BeNullOrEmpty
         foreach ($r in $result) {
             $r.tag_name | Should -Match '^v5\.'
         }
+        ($result.tag_name | Where-Object { $_ -notmatch '^v5\.' }) | Should -BeNullOrEmpty
     }
 
     It 'Returns nothing for non-matching filter' {
