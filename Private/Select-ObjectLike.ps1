@@ -1,5 +1,5 @@
 function Select-ObjectLike {
-<#+
+    <#+
 .SYNOPSIS
     Filters an array of objects using a flexible hashtable-based filter syntax.
 
@@ -74,8 +74,8 @@ function Select-ObjectLike {
                         $val = [datetime]$val
                     }
                     switch ($op) {
-                        '>'  { if (!($itemValue -gt $val)) { $match = $false; break } }
-                        '<'  { if (!($itemValue -lt $val)) { $match = $false; break } }
+                        '>' { if (!($itemValue -gt $val)) { $match = $false; break } }
+                        '<' { if (!($itemValue -lt $val)) { $match = $false; break } }
                         '>=' { if (!($itemValue -ge $val)) { $match = $false; break } }
                         '<=' { if (!($itemValue -le $val)) { $match = $false; break } }
                         '==' { if (!($itemValue -eq $val)) { $match = $false; break } }
@@ -90,7 +90,8 @@ function Select-ObjectLike {
                         'notmatch' { if ($itemValue -match $val) { $match = $false; break } }
                         default { $match = $false; break }
                     }
-                } elseif ($filterValue -is [hashtable]) {
+                }
+                elseif ($filterValue -is [hashtable]) {
                     # Nested filter for subobjects/arrays
                     if ($itemValue -is [System.Collections.IEnumerable] -and !$itemValue.GetType().IsPrimitive) {
                         $subMatch = $false
@@ -101,11 +102,13 @@ function Select-ObjectLike {
                             }
                         }
                         if (-not $subMatch) { $match = $false; break }
-                    } else {
+                    }
+                    else {
                         # Exact match for hashtable
                         if ($itemValue -ne $filterValue) { $match = $false; break }
                     }
-                } else {
+                }
+                else {
                     # Exact match
                     if ($itemValue -ne $filterValue) { $match = $false; break }
                 }

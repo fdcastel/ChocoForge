@@ -1,62 +1,89 @@
 function Expand-GitHubReleases {
     <#
     .SYNOPSIS
-        Adds a 'version' property to each GitHub release object and optionally filters by minimum version. Optionally extracts asset attributes using a regex with named capture groups.
+        Adds a 'version' property to each GitHub release object and optionally filters by minimum version. Optionally extracts asset attributes using a regex with named capture groups. Can also transpose the assets array into a hashtable keyed by a specified property.
 
     .DESCRIPTION
-        Receives the output of Get-GitHubReleases. Adds a 'version' property to each release, extracted from 'tag_name' using a regex pattern if provided. Optionally filters to only include releases with version greater than or equal to -MinimumVersion. If -VersionFormatScriptBlock is provided, it is used to construct the version string from regex matches. If -AssetPattern is provided, each asset is matched against the pattern and all named capture groups are added as properties. Assets that do not match are excluded.
+        Receives the output of Get-GitHubReleases. Adds a 'version' property to each release, extracted from 'tag_name' using a regex pattern if provided. You can specify either -VersionPattern or -VersionScriptBlock, but not both. If -MinimumVersion is provided, only releases with version greater than or equal to this value are included, and this requires either -VersionPattern or -VersionScriptBlock. If -AssetPattern is provided, each asset is matched against the pattern and all named capture groups are added as properties; only matching assets are included. If -TransposeProperty is provided, the assets array is transposed into a hashtable keyed by the specified property, and the key property is removed from each asset object in the output.
 
     .PARAMETER InputObject
         The array of release objects (output of Get-GitHubReleases).
 
     .PARAMETER VersionPattern
-        Optional. Regex pattern with a capture group to extract the version from tag_name. If not provided, tag_name is used as-is.
+        Optional. Regex pattern with a capture group to extract the version from tag_name. Mutually exclusive with VersionScriptBlock. If not provided, tag_name is used as-is.
 
-    .PARAMETER VersionFormatScriptBlock
-        Optional. Script block to construct the version string from $Matches after a successful pattern match.
+    .PARAMETER VersionScriptBlock
+        Optional. Script block to construct the version string from $Matches after a successful pattern match. Mutually exclusive with VersionPattern.
 
     .PARAMETER MinimumVersion
-        Optional. Only releases with version greater than or equal to this value are included. Uses [version] comparison.
+        Optional. Only releases with version greater than or equal to this value are included. Uses [version] comparison. Requires either VersionPattern or VersionScriptBlock.
 
     .PARAMETER AssetPattern
-        Optional. Regex pattern with named capture groups to extract asset attributes (e.g. platform, arch, debug). Only assets matching the pattern are included.
+        Optional. Regex pattern with named capture groups to extract asset attributes (e.g. platform, arch, debug). Only assets matching the pattern are included. Named groups are added as properties to each asset.
+
+    .PARAMETER TransposeProperty
+        Optional. If provided, the assets array is transposed into a hashtable keyed by this property (e.g. 'arch'), and the key property is removed from each asset object in the output.
 
     .EXAMPLE
-        $expanded = Get-GitHubReleases ... | Expand-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionFormatScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\.(?!zip$)[^.]+$'
+        $expanded = Get-GitHubReleases ... | Expand-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
+
+    .NOTES
+        - VersionPattern and VersionScriptBlock are mutually exclusive.
+        - MinimumVersion can only be used if one of the above is provided.
+        - If TransposeProperty is used, the key property is removed from each asset in the output.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'NoVersion')]
     param(
-        [Parameter(Mandatory, ValueFromPipeline)]
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'NoVersion')]
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionPattern')]
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionScriptBlock')]
         [object[]]$InputObject,
+
+        [Parameter(ParameterSetName = 'VersionPattern')]
         [string]$VersionPattern,
-        [scriptblock]$VersionFormatScriptBlock,
-        [string]$MinimumVersion,
-        [string]$AssetPattern
+
+        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [scriptblock]$VersionScriptBlock,
+
+        [Parameter(ParameterSetName = 'VersionPattern')]
+        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [version]$MinimumVersion,
+
+        [Parameter(ParameterSetName = 'NoVersion')]
+        [Parameter(ParameterSetName = 'VersionPattern')]
+        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [string]$AssetPattern,
+
+        [Parameter(ParameterSetName = 'NoVersion')]
+        [Parameter(ParameterSetName = 'VersionPattern')]
+        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [string]$TransposeProperty
     )
 
     process {
-        $valid = @()
+        $result = @()
         foreach ($release in $InputObject) {
             $version = $null
-            $matched = $false
-            if ($VersionPattern) {
-                if ($release.tag_name -match $VersionPattern) {
-                    $matched = $true
-                    if ($VersionFormatScriptBlock) {
-                        $version = & $VersionFormatScriptBlock
-                    } else {
-                        $version = $Matches[1]
-                    }
-                }
-            } else {
-                $matched = $true
-                $version = $release.tag_name
+            $matched = $true
+            
+            if ($PSBoundParameters.ContainsKey('OptionalScript')) {
+                $version = & $VersionScriptBlock
+                $matched = $null -ne $version
             }
-            if ($matched) {
-                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue $version -Force
+            elseif ($VersionPattern) {
+                $matched = $release.tag_name -match $VersionPattern
+                $version = $matched ? $Matches[1] : $null
+            }
+
+            # If a version is extracted, add it as a property
+            if ($null -ne $version) {
+                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue ([version]$version) -Force
+            } 
+
+            if ($matched) {                
                 # Asset attribute extraction using named capture groups
-                # If -AssetPattern is provided, only keep assets that match the pattern
-                # For each asset, if the name matches, add all named capture groups as properties
+                #   If -AssetPattern is provided, only keep assets that match the pattern
+                #   For each asset, if the name matches, add all named capture groups as properties
                 if ($AssetPattern -and $release.PSObject.Properties['assets']) {
                     $filteredAssets = @()
                     foreach ($asset in $release.assets) {
@@ -73,13 +100,32 @@ function Expand-GitHubReleases {
                     }
                     $release.assets = $filteredAssets
                 }
-                $valid += $release
+                $result += $release
             }
         }
-        $filtered = $valid
+
+        # If MinimumVersion is provided, filter releases by version
         if ($MinimumVersion) {
-            $filtered = $filtered | Where-Object { [version]$_.version -ge [version]$MinimumVersion }
+            $result = $result | Where-Object { $_.version -ge $MinimumVersion }
         }
-        $filtered
+
+        # If TransposeProperty is provided, group assets by the specified property
+        if ($TransposeProperty) {
+            $result = $result | Select-Object 'name', 'version', 'tag_name', 'html_url', 'prerelease', 'published_at', @{
+                N = 'assets'
+                E = {
+                    $grouped = $_.assets | Group-Object -Property $TransposeProperty
+                    $ht = @{}
+                    foreach ($g in $grouped) {
+                        $asset = $g.Group[0].PSObject.Copy()
+                        $asset.PSObject.Properties.Remove('arch')
+                        $ht[$($g.Name)] = $asset
+                    }
+                    $ht
+                }
+            }
+        }
+
+        return $result
     }
 }

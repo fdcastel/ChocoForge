@@ -22,18 +22,19 @@ function Get-GitHubReleases {
 
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
         # Debug only
-        # $response | ConvertTo-Json -Depth 100 | Out-File -Encoding utf8 -FilePath "$PSScriptRoot/../Tests/assets/github-releases.json" -Force
+        # $response | ConvertTo-Json -Depth 20 | Out-File -Encoding utf8 -FilePath "$PSScriptRoot/../Tests/assets/github-releases.json" -Force
         Write-VerboseMark -Message "- Received $($response.Count) releases from GitHub API."
 
         $result = $response | Select-Object `
             'html_url',
-            'tag_name',
-            'name',
-            'prerelease',
-            'published_at',
-            @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
+        'tag_name',
+        'name',
+        'prerelease',
+        'published_at',
+        @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
         return $result
-    } catch {
+    }
+    catch {
         [string]$errorMessage = $_.Exception.Message
         if ($errorMessage -like "*rate limit*") {
             Write-Warning "GitHub API rate limit exceeded. Please wait and try again later, or set GITHUB_ACCESS_TOKEN environment variable to increase rate limits."
