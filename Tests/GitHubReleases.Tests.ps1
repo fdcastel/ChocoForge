@@ -20,13 +20,30 @@ Describe 'Get-GitHubReleases' {
 
         It 'Expands and filters Firebird v5+ releases by version' {
             $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
-            $expanded = $releases | Expand-GitHubReleases -VersionPattern 'v([\d.]+)' -MinimumVersion '5.0.0'
+            $versionPattern = 'v(5\.[\d.]+)'
+            $assetsPattern = 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-.]+)(-(?<debug>withDebugSymbols))?\.(?<ext>.+)$'
+            $expanded = $releases | Expand-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            # $expanded | ConvertTo-Json -depth 20 | Out-File '/temp/v5.json'
+
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
-                $r.version | Should -Match '^5\.'
+                $r.version -match '^5\.' | Should -Be $true
                 [version]$r.version -ge [version]'5.0.0' | Should -Be $true
             }
-            $expanded | ConvertTo-Json -depth 20 | Out-File c:\temp\t.json
+        }
+
+        It 'Expands and filters Firebird v3/v4 releases by version' {
+            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $versionPattern = 'v([3-4]\.[\d.]+)'
+            $assetsPattern = 'Firebird-[\d.]+-\d+-(?<arch>[^-.]+)(-(?<debug>pdb))?\.exe$'
+            $expanded = $releases | Expand-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            # $expanded | ConvertTo-Json -depth 20 | Out-File '/temp/v4.json'
+
+            $expanded | Should -Not -BeNullOrEmpty
+            foreach ($r in $expanded) {
+                $r.version -match '^5\.' | Should -Be $false
+                [version]$r.version -lt [version]'5.0.0' | Should -Be $true
+            }
         }
     }
 }
