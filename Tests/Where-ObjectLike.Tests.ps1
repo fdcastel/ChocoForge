@@ -1,0 +1,108 @@
+# Pester 5 tests for Select-ObjectLike
+Describe 'Select-ObjectLike' {
+    BeforeAll {
+        . "$PSScriptRoot/../Private/Select-ObjectLike.ps1"
+        $global:sample = @(
+            [PSCustomObject]@{
+                html_url = 'https://github.com/FirebirdSQL/firebird/releases/tag/v5.0.2'
+                tag_name = 'v5.0.2'
+                name = 'Firebird 5.0.2'
+                prerelease = $false
+                published_at = '2025-02-12T11:19:52Z'
+                assets = @(
+                    [PSCustomObject]@{
+                        name = 'Firebird-5.0.2.1613-0-android-arm32-withDebugSymbols.tar.gz'
+                        size = 64526011
+                        digest = $null
+                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.2/Firebird-5.0.2.1613-0-android-arm32-withDebugSymbols.tar.gz'
+                    },
+                    [PSCustomObject]@{
+                        name = 'Firebird-5.0.2.1613-0-android-arm32.tar.gz'
+                        size = 23030688
+                        digest = $null
+                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.2/Firebird-5.0.2.1613-0-android-arm32.tar.gz'
+                    }
+                )
+            },
+            [PSCustomObject]@{
+                html_url = 'https://github.com/FirebirdSQL/firebird/releases/tag/v4.0.5'
+                tag_name = 'v4.0.5'
+                name = 'Firebird 4.0.5'
+                prerelease = $false
+                published_at = '2024-08-08T14:09:32Z'
+                assets = @(
+                    [PSCustomObject]@{
+                        name = 'Firebird-4.0.5.3140-0-Win32-pdb.exe'
+                        size = 12345678
+                        digest = $null
+                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v4.0.5/Firebird-4.0.5.3140-0-Win32-pdb.exe'
+                    }
+                )
+            },
+            [PSCustomObject]@{
+                html_url = 'https://github.com/FirebirdSQL/firebird/releases/tag/v3.0.12'
+                tag_name = 'v3.0.12'
+                name = 'Firebird 3.0.12'
+                prerelease = $false
+                published_at = '2024-08-08T14:20:47Z'
+                assets = @()
+            }
+        )
+    }
+
+    It 'Filters by exact tag name' {
+        $filter = @{ tag_name = 'v5.0.2' }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        $result.tag_name | Should -Contain 'v5.0.2'
+    }
+
+    It 'Filters by prerelease false' {
+        $filter = @{ prerelease = $false }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        ($result.prerelease | Select-Object -Unique) | Should -Be $false
+    }
+
+    It 'Filters by published_at greater than a date' {
+        $filter = @{ published_at = @{ op = '>' ; value = '2025-01-01' } }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        foreach ($r in $result) {
+            ([datetime]$r.published_at) | Should -BeGreaterThan ([datetime]'2025-01-01')
+        }
+    }
+
+    It 'Filters by asset name (exact match)' {
+        $filter = @{ assets = @{ name = 'Firebird-5.0.2.1613-0-android-arm32.tar.gz' } }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        foreach ($r in $result) {
+            ($r.assets.name | Select-Object -Unique) | Should -Contain 'Firebird-5.0.2.1613-0-android-arm32.tar.gz'
+        }
+    }
+
+    It 'Filters by asset size greater than 100MB' {
+        $filter = @{ assets = @{ size = @{ op = '>' ; value = 100000000 } } }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        foreach ($r in $result) {
+            ($r.assets.size | Where-Object { $_ -gt 100000000 }) | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    It 'Filters by regex on tag_name' {
+        $filter = @{ tag_name = 're:^v5\\.' }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -Not -BeNullOrEmpty
+        foreach ($r in $result) {
+            $r.tag_name | Should -Match '^v5\.'
+        }
+    }
+
+    It 'Returns nothing for non-matching filter' {
+        $filter = @{ tag_name = 'nonexistent' }
+        $result = Select-ObjectLike -InputObject $global:sample -Filter $filter
+        $result | Should -BeNullOrEmpty
+    }
+}
