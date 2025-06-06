@@ -17,10 +17,12 @@ function Get-GitHubReleases {
         [string]$githubAccessToken = $env:GITHUB_ACCESS_TOKEN
         if ($githubAccessToken) {
             Write-VerboseMark "- Using authenticated GitHub API requests"
-            $headers['Authorization'] = "Bearer $githubToken"
+            $headers['Authorization'] = "Bearer $githubAccessToken"
         }
 
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+        # Debug only
+        # $response | ConvertTo-Json -Depth 100 | Out-File -Encoding utf8 -FilePath "$PSScriptRoot/../Tests/assets/github-releases.json" -Force
         Write-VerboseMark -Message "- Received $($response.Count) releases from GitHub API."
 
         $result = $response | Select-Object `
