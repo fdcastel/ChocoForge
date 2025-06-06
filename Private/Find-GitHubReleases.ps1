@@ -1,4 +1,4 @@
-function Get-GitHubReleases {
+function Find-GitHubReleases {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -27,10 +27,10 @@ function Get-GitHubReleases {
 
         $result = $response | Select-Object `
             'html_url',
-        'tag_name',
-        'name',
-        'prerelease',
-        'published_at',
+            'tag_name',
+            'name',
+            'prerelease',
+            'published_at',
         @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
         return $result
     }

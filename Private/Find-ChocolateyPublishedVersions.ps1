@@ -1,10 +1,10 @@
-function Get-ChocolateyPackages {
+function Find-ChocolateyPublishedVersions {
     <#
     .SYNOPSIS
-        Queries all versions of a given package from a Chocolatey repository using 'choco search'.
+        Returns all published versions of a given package from a Chocolatey repository.
 
     .DESCRIPTION
-        Uses the choco.exe CLI to search for all versions of a package in a Chocolatey-compatible repository. Returns a list of versions and metadata for the package.
+        Uses the choco.exe CLI to search for all versions of a package in a Chocolatey-compatible repository. Returns a list of version objects only.
 
     .PARAMETER PackageName
         The name of the package to search for.
@@ -13,9 +13,9 @@ function Get-ChocolateyPackages {
         The Chocolatey repository URL. If not specified, uses the default community repository.
 
     .EXAMPLE
-        Get-ChocolateyPackages -PackageName 'git'
+        Find-ChocolateyPublishedVersions -PackageName 'git'
     .EXAMPLE
-        Get-ChocolateyPackages -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/'
+        Find-ChocolateyPublishedVersions -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/'
     #>
     [CmdletBinding()]
     param(
@@ -39,12 +39,9 @@ function Get-ChocolateyPackages {
 
     # Parse output: lines like 'git|2.44.0'
     $lines = $result.StdOut -split "`n" | Where-Object { $_ -match '\|' }
-    $packages = foreach ($line in $lines) {
+    $versions = foreach ($line in $lines) {
         $parts = $line -split '\|'
-        [PSCustomObject]@{
-            Name    = $parts[0].Trim()
-            Version = [version]$parts[1].Trim()
-        }
+        [version]$parts[1].Trim()
     }
-    $packages
+    return $versions
 }

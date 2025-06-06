@@ -1,6 +1,6 @@
 Import-Module "$PSScriptRoot/../ChocoForge.psd1" -Force
 
-Describe 'Get-GitHubReleases' {
+Describe 'Find-GitHubReleases' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
             Mock Invoke-RestMethod {
@@ -9,22 +9,22 @@ Describe 'Get-GitHubReleases' {
         }
 
         It 'Returns releases for repository' {
-            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
             Write-VerboseMark -Message "Releases retrieved: $($releases.Count)"
         }
 
         It 'Filters Firebird releases by tag_name regex' {
-            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
             $filter = @{ tag_name = @{ op = 'match'; value = '^R3' } }
             $filtered = Select-ObjectLike -InputObject $releases -Filter $filter
             $filtered.Count | Should -Be 6
         }
 
         It 'Expands and filters Firebird v5+ releases by version' {
-            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
             $versionPattern = 'v(5\.[\d.]+)'
             $assetsPattern = 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-.]+)(-(?<debug>withDebugSymbols))?\.(?<ext>.+)$'
-            $expanded = $releases | Expand-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
 
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
@@ -34,10 +34,10 @@ Describe 'Get-GitHubReleases' {
         }
 
         It 'Expands and filters Firebird v3/v4 releases by version' {
-            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
             $versionPattern = 'v([3-4]\.[\d.]+)'
             $assetsPattern = 'Firebird-[\d.]+-\d+-(?<arch>[^-.]+)(-(?<debug>pdb))?\.exe$'
-            $expanded = $releases | Expand-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
 
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
@@ -47,11 +47,11 @@ Describe 'Get-GitHubReleases' {
         }
 
         It 'Transposes assets by arch property' {
-            $releases = Get-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
+            $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
 
             $versionPattern = 'v(5\.\d+\.\d+)$'
             $assetsPattern = 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
-            $expanded = $releases | Expand-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern -TransposeProperty 'arch'
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern -TransposeProperty 'arch'
 
             $expanded | Should -Not -BeNullOrEmpty
             $expanded.assets.x64.Length | Should -Be 3

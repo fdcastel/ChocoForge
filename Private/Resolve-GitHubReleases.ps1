@@ -1,13 +1,13 @@
-function Expand-GitHubReleases {
+function Resolve-GitHubReleases {
     <#
     .SYNOPSIS
         Adds a 'version' property to each GitHub release object and optionally filters by minimum version. Optionally extracts asset attributes using a regex with named capture groups. Can also transpose the assets array into a hashtable keyed by a specified property.
 
     .DESCRIPTION
-        Receives the output of Get-GitHubReleases. Adds a 'version' property to each release, extracted from 'tag_name' using a regex pattern if provided. You can specify either -VersionPattern or -VersionScriptBlock, but not both. If -MinimumVersion is provided, only releases with version greater than or equal to this value are included, and this requires either -VersionPattern or -VersionScriptBlock. If -AssetPattern is provided, each asset is matched against the pattern and all named capture groups are added as properties; only matching assets are included. If -TransposeProperty is provided, the assets array is transposed into a hashtable keyed by the specified property, and the key property is removed from each asset object in the output.
+        Receives the output of Find-GitHubReleases. Adds a 'version' property to each release, extracted from 'tag_name' using a regex pattern if provided. You can specify either -VersionPattern or -VersionScriptBlock, but not both. If -MinimumVersion is provided, only releases with version greater than or equal to this value are included, and this requires either -VersionPattern or -VersionScriptBlock. If -AssetPattern is provided, each asset is matched against the pattern and all named capture groups are added as properties; only matching assets are included. If -TransposeProperty is provided, the assets array is transposed into a hashtable keyed by the specified property, and the key property is removed from each asset object in the output.
 
     .PARAMETER InputObject
-        The array of release objects (output of Get-GitHubReleases).
+        The array of release objects (output of Find-GitHubReleases).
 
     .PARAMETER VersionPattern
         Optional. Regex pattern with a capture group to extract the version from tag_name. Mutually exclusive with VersionScriptBlock. If not provided, tag_name is used as-is.
@@ -25,7 +25,7 @@ function Expand-GitHubReleases {
         Optional. If provided, the assets array is transposed into a hashtable keyed by this property (e.g. 'arch'), and the key property is removed from each asset object in the output.
 
     .EXAMPLE
-        $expanded = Get-GitHubReleases ... | Expand-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
+        $expanded = Find-GitHubReleases ... | Resolve-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
 
     .NOTES
         - VersionPattern and VersionScriptBlock are mutually exclusive.

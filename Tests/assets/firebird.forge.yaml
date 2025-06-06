@@ -1,0 +1,38 @@
+package: firebird
+
+releases:
+  source: https://github.com/FirebirdSQL/firebird  # For now it musts be a GitHub repository. Required
+  flavors:
+    # At least one flavor must be defined.
+    current:
+      - versionPattern: 'v(5\.\d+\.\d+)$' # Must be a valid Regex. Required
+      - assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$' # Must be a valid Regex. May have a maximum of one capture group. Required.
+    legacy:
+      - versionPattern: 'v([3-4]\.\d+\.\d+)$'
+      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+
+targets:
+  # At least one target must be defined.
+  community:
+    url: https://community.chocolatey.org/api/v2/ # Required
+    apiKey: ${CHOCOLATEY_API_KEY} # Required
+  github:
+    url: https://nuget.pkg.github.com/fdcastel/index.json
+    apiKey: ${GITHUB_API_KEY}
+
+replacements:
+  # At least one replacement must be defined.
+  - firebird.nuspec:  # must be an existing file. If relative, it must be relative to this file.
+    - pattern: PLACEHOLDER_VERSION
+      value: '{{version}}'
+  - tools/chocolateyinstall.ps1:
+    - pattern: PLACEHOLDER_VERSION
+      value: '{{version}}'
+    - pattern: PLACEHOLDER_URL32
+      value: '{{assets.win32.url}}'
+    - pattern: PLACEHOLDER_URL64
+      value: '{{assets.win64.url}}'
+    - pattern: PLACEHOLDER_CHECKSUM32
+      value: '{{assets.win32.checksum}}'
+    - pattern: PLACEHOLDER_CHECKSUM64
+      value: '{{assets.win64.checksum}}'
