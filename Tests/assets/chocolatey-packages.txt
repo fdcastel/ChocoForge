@@ -1,0 +1,7 @@
+firebird|5.0.2
+firebird|5.0.1
+firebird|5.0.0
+firebird|3.0.12
+firebird|3.0.11
+firebird|3.0.10.1000
+firebird|3.0.9
