@@ -36,16 +36,16 @@ Describe 'Configuration tests' {
             $result = Resolve-ForgeConfiguration -Configuration $config
 
             $result.assets | Should -Not -BeNullOrEmpty
-            $result.assets.Length | Should -Be 14
+            $result.assets.Length | Should -Be 12  # Minimum version should filter out 3.0.8 and 3.0.9
 
             $result.targets | Should -Not -BeNullOrEmpty
             $result.targets.Keys.Count | Should -Be 2
 
-            $result.targets.community.missingVersions.Length | Should -Be 7
+            $result.targets.community.missingVersions.Length | Should -Be 6
             $result.targets.community.publishedVersions.Length | Should -Be 7
 
+            $result.targets.github.missingVersions.Length | Should -Be 7
             $result.targets.github.publishedVersions.Length | Should -Be 6
-            $result.targets.github.missingVersions.Length | Should -Be 8
         }
     }
 }

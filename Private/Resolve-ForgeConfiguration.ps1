@@ -35,14 +35,21 @@ function Resolve-ForgeConfiguration {
     foreach ($flavor in $Configuration.releases.flavors.Keys) {
         $versionPattern = $Configuration.releases.flavors[$flavor].versionPattern
         $assetsPattern = $Configuration.releases.flavors[$flavor].assetsPattern
+        $minimumVersion = $Configuration.releases.flavors[$flavor].minimumVersion
 
         # If assetsPattern has a named capture group, transpose by it
-        $expanded = if ($assetsPattern -match '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') {
-            Resolve-GitHubReleases -InputObject $releases -VersionPattern $versionPattern -AssetPattern $assetsPattern -TransposeProperty $Matches[1]
+        $resolveParameters = @{
+            InputObject   = $releases
+            VersionPattern = $versionPattern
+            AssetPattern   = $assetsPattern
         }
-        else {
-            Resolve-GitHubReleases -InputObject $releases -VersionPattern $versionPattern -AssetPattern $assetsPattern
+        if ($assetsPattern -match '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') {
+            $resolveParameters['TransposeProperty'] = $Matches[1]
         }
+        if ($minimumVersion) {
+            $resolveParameters['MinimumVersion'] = $minimumVersion
+        }
+        $expanded = Resolve-GitHubReleases @resolveParameters
         $allAssets += $expanded
     }
     # Flatten, sort by version descending

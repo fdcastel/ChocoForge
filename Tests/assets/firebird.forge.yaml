@@ -10,6 +10,7 @@ releases:
     legacy:
       - versionPattern: 'v([3-4]\.\d+\.\d+)$'
       - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+      - minimumVersion: 3.0.10 # Minimum version to consider for updates. Optional, but recommended.
 
 targets:
   # At least one target must be defined.
@@ -22,10 +23,7 @@ targets:
 
 replacements:
   # At least one replacement must be defined.
-  - firebird.nuspec:  # must be an existing file. If relative, it must be relative to this file.
-    - pattern: PLACEHOLDER_VERSION
-      value: '{{version}}'
-  - tools/chocolateyinstall.ps1:
+  - tools/chocolateyinstall.ps1:  # must be an existing file. If relative, it must be relative to this file.
     - pattern: PLACEHOLDER_VERSION
       value: '{{version}}'
     - pattern: PLACEHOLDER_URL32
