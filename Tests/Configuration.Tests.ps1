@@ -35,8 +35,8 @@ Describe 'Configuration tests' {
             $config = Read-ForgeConfiguration -Path "$PSScriptRoot/assets/firebird.forge.yaml"
             $result = Resolve-ForgeConfiguration -Configuration $config
 
-            $result.assets | Should -Not -BeNullOrEmpty
-            $result.assets.Length | Should -Be 12  # Minimum version should filter out 3.0.8 and 3.0.9
+            $result.versions | Should -Not -BeNullOrEmpty
+            $result.versions.Length | Should -Be 12  # Minimum version should filter out 3.0.8 and 3.0.9
 
             $result.targets | Should -Not -BeNullOrEmpty
             $result.targets.Keys.Count | Should -Be 2

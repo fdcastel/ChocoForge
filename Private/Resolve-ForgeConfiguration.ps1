@@ -30,8 +30,8 @@ function Resolve-ForgeConfiguration {
     $releases = Find-GitHubReleases -RepositoryOwner $repoOwner -RepositoryName $repoName
     Write-VerboseMark -Message "Fetched $($releases.Count) releases from GitHub."
 
-    # Expand all flavors and collect assets
-    $allAssets = @()
+    # Expand all flavors and collect versions
+    $allVersions = @()
     foreach ($flavor in $Configuration.releases.flavors.Keys) {
         $versionPattern = $Configuration.releases.flavors[$flavor].versionPattern
         $assetsPattern = $Configuration.releases.flavors[$flavor].assetsPattern
@@ -50,20 +50,20 @@ function Resolve-ForgeConfiguration {
             $resolveParameters['MinimumVersion'] = $minimumVersion
         }
         $expanded = Resolve-GitHubReleases @resolveParameters
-        $allAssets += $expanded
+        $allVersions += $expanded
     }
     # Flatten, sort by version descending
-    $allAssets = $allAssets | Sort-Object -Property version -Descending
-    $Configuration | Add-Member -NotePropertyName 'assets' -NotePropertyValue $allAssets -Force
-    Write-VerboseMark -Message "Added $($allAssets.Count) assets to configuration."
+    $allVersions = $allVersions | Sort-Object -Property version -Descending
+    $Configuration | Add-Member -NotePropertyName 'versions' -NotePropertyValue $allVersions -Force
+    Write-VerboseMark -Message "Added $($allVersions.Count) versions to configuration."
 
     # Query all chocolatey targets
-    $allVersions = $allAssets.version | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build) }  # Discard revision (4th element)
+    $allVersions = $allVersions.version | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build) }  # Discard revision (4th element)
     foreach ($targetName in $Configuration.targets.Keys) {
         $target = $Configuration.targets[$targetName]
         $target.publishedVersions = Find-ChocolateyPublishedVersions -PackageName $Configuration.package -SourceUrl $target.url
 
-        # Find missing versions: those in assets but not in publishedVersions.
+        # Find missing versions: those in allVersions but not in publishedVersions.
         $pubVersions = $target.publishedVersions | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build) }  # Discard revision (4th element)
         $target.missingVersions = $allVersions | Where-Object { $pubVersions -notcontains $_ }
 
