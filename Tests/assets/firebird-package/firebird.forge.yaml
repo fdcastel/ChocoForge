@@ -15,7 +15,7 @@ releases:
 targets:
   # At least one target must be defined.
   community:
-    url: https://community.chocolatey.org/api/v2/ # Required
+    url: https://community.chocolatey.org/api/v2 # Required
     apiKey: ${CHOCOLATEY_API_KEY} # Required
   github:
     url: https://nuget.pkg.github.com/fdcastel/index.json

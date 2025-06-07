@@ -10,7 +10,7 @@ function Invoke-Chocolatey {
 
     $chocoExe = Get-Command choco -ErrorAction SilentlyContinue
     if (-not $chocoExe) {
-        throw "Chocolatey executable (choco.exe) not found. Please ensure Chocolatey is installed and in your PATH."
+        throw 'Chocolatey executable (choco.exe) not found. Please ensure Chocolatey is installed and in your PATH.'
     }
 
     $psi = [System.Diagnostics.ProcessStartInfo]::new()

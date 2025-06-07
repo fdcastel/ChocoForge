@@ -21,20 +21,24 @@ function Find-ChocolateyPublishedVersions {
     param(
         [Parameter(Mandatory)]
         [string]$PackageName,
-        [string]$SourceUrl
+        [string]$SourceUrl,
+        [string]$User,
+        [string]$Password
     )
 
-    $defaultSource = 'https://community.chocolatey.org/api/v2/'
-    $src = if ($SourceUrl) { $SourceUrl } else { $defaultSource }
+    $SourceUrl = $SourceUrl ? $SourceUrl : 'https://community.chocolatey.org/api/v2'
 
     $chocoArguments = @(
-        'search', $PackageName, '--all', '--exact', '--source', $src,
-        '--limit-output', '--skip-compatibility-checks', '--ignore-http-cache'
+        'search', $PackageName, '--all', '--exact', '--source', $SourceUrl,
+        '--skip-compatibility-checks', '--ignore-http-cache', '--limit-output' 
     )
+    if ($User -and $Password) {
+        $chocoArguments += @('--user', $User, '--password', $Password)
+    }
 
     $result = Invoke-Chocolatey -Arguments $chocoArguments
     if ($result.ExitCode -ne 0) {
-        throw "choco search failed: $($result.StdErr)"
+        throw "choco search failed: $($result.StdOut)"
     }
 
     # Parse output: lines like 'git|2.44.0'

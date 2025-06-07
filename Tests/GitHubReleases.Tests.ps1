@@ -1,6 +1,6 @@
 Import-Module "$PSScriptRoot/../ChocoForge.psd1" -Force
 
-Describe 'Find-GitHubReleases' {
+Describe 'GitHubReleases' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
             Mock Invoke-RestMethod {
@@ -29,7 +29,7 @@ Describe 'Find-GitHubReleases' {
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
                 $r.version -match '^5\.' | Should -Be $true
-                [version]$r.version -ge [version]'5.0.0' | Should -Be $true
+                [semver]$r.version -ge [semver]'5.0.0' | Should -Be $true
             }
         }
 
@@ -42,7 +42,7 @@ Describe 'Find-GitHubReleases' {
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
                 $r.version -match '^5\.' | Should -Be $false
-                [version]$r.version -lt [version]'5.0.0' | Should -Be $true
+                [semver]$r.version -lt [semver]'5.0.0' | Should -Be $true
             }
         }
 

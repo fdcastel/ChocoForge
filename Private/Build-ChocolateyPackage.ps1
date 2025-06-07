@@ -1,4 +1,23 @@
-function New-ChocolateyPackage {
+function Convert-Template {
+    param([string]$Content, $Context)
+    $Content -replace '{{\s*([\w.]+)\s*}}', {
+        $expr = $_.Groups[1].Value
+        $parts = $expr -split '\.'
+        $val = $Context
+        foreach ($p in $parts) {
+            if ($null -eq $val) { break }
+            $val = $val.$p
+        } 
+        if ($null -eq $val) { 
+            Write-VerboseMark "Missing context value for '$expr'. Returning empty string."
+            return '' 
+        } else { 
+            return $val.ToString() 
+        }
+    }
+}
+
+function Build-ChocolateyPackage {
     <#
     .SYNOPSIS
         Creates one or more Chocolatey packages from a .nuspec file and tools folder, with context-based template substitution.
@@ -11,56 +30,39 @@ function New-ChocolateyPackage {
     .PARAMETER OutputPath
         Optional output directory for the .nupkg file.
     .PARAMETER Context
-        Context object or array of objects for template substitutions (each must have a 'version' property).
+        Context object for template substitutions (must have a 'version' property). Accepts pipeline input.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [string]$NuspecPath,
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [object]$Context,
 
         [Parameter(Mandatory)]
-        [object[]]$Context,
+        [string]$NuspecPath,
 
         [string]$OutputPath
     )
 
-    function Convert-Template {
-        param([string]$Content, $Context)
-        $Content -replace '{{\s*([\w.]+)\s*}}', {
-            $expr = $_.Groups[1].Value
-            $parts = $expr -split '\.'
-            $val = $Context
-            foreach ($p in $parts) {
-                if ($null -eq $val) { break }
-                $val = $val.$p
-            }
-            if ($null -eq $val) { 
-                Write-Warning "Missing context value for '$expr'. Returning empty string."
-                return '' 
-            } else { 
-                return $val.ToString() 
-            }
+    begin {
+        $nuspecFull = (Resolve-Path -LiteralPath $NuspecPath).Path
+        if (-not (Test-Path $nuspecFull)) {
+            throw "Nuspec file not found: $nuspecFull"
+        }
+
+        $nuspecBase = [System.IO.Path]::GetFileNameWithoutExtension($nuspecFull)
+        $srcDir = Split-Path -Parent $nuspecFull
+        $toolsDir = Join-Path $srcDir 'tools'
+        if (-not (Test-Path $toolsDir)) {
+            throw "Expected 'tools' folder not found: $toolsDir"
         }
     }
 
-    $nuspecFull = (Resolve-Path -LiteralPath $NuspecPath).Path
-    if (-not (Test-Path $nuspecFull)) {
-        throw "Nuspec file not found: $nuspecFull"
-    }
-
-    $nuspecBase = [System.IO.Path]::GetFileNameWithoutExtension($nuspecFull)
-    $srcDir = Split-Path -Parent $nuspecFull
-    $toolsDir = Join-Path $srcDir 'tools'
-    if (-not (Test-Path $toolsDir)) {
-        throw "Expected 'tools' folder not found: $toolsDir"
-    }
-
-    $contexts = @($Context)
-    $results = @()
-    foreach ($ctx in $contexts) {
+    process {
+        $ctx = $Context
         if (-not $ctx.PSObject.Properties['version']) {
             throw "Each context object must have a 'version' property."
         }
+
         $versionStr = $ctx.version.ToString()
         $tempRoot = Join-Path $env:TEMP 'chocoforge'
         $tempDir = Join-Path $tempRoot (Join-Path $nuspecBase $versionStr)
@@ -78,7 +80,7 @@ function New-ChocolateyPackage {
         # Render and copy tools folder recursively
         $srcToolsFiles = Get-ChildItem -Path $toolsDir -Recurse -File
         foreach ($file in $srcToolsFiles) {
-            $relPath = $file.FullName.Substring($toolsDir.Length).TrimStart('/','\')
+            $relPath = $file.FullName.Substring($toolsDir.Length).TrimStart('/', '\')
             $destPath = Join-Path $tempDir (Join-Path 'tools' $relPath)
             $destDir = Split-Path -Parent $destPath
             New-Item -ItemType Directory -Path $destDir -Force | Out-Null 
@@ -88,7 +90,8 @@ function New-ChocolateyPackage {
         }
 
         # Prepare choco pack args
-        $chocoArguments = @('pack', (Join-Path $tempDir ([System.IO.Path]::GetFileName($nuspecFull))))
+        $tempNuspec = Join-Path $tempDir ([System.IO.Path]::GetFileName($nuspecFull))
+        $chocoArguments = @('pack', $tempNuspec, '--limit-output')
         if ($OutputPath) {
             $chocoArguments += '--output-directory'
             $chocoArguments += $OutputPath
@@ -97,10 +100,16 @@ function New-ChocolateyPackage {
         Write-VerboseMark -Message "Packing Chocolatey package in $tempDir"
         $result = Invoke-Chocolatey -Arguments $chocoArguments -WorkingDirectory $tempDir
         if ($result.ExitCode -ne 0) {
-            throw "choco pack failed for version $($versionStr): $($result.StdErr)"
+            throw "choco pack failed for version $($versionStr): $($result.StdOut)"
         }
-        Write-VerboseMark -Message "Chocolatey package created successfully for version $versionStr."
-        $results += $result.StdOut
+
+        # Extract the filename from the output
+        if ($result.StdOut -match "Successfully created package '([^']+)'") {
+            $fileName = $Matches[1]
+            Write-VerboseMark -Message "Chocolatey package '$fileName' created."
+            return $fileName
+        } else {
+            throw 'Unexpected output from "choco pack": No package path found in message.'
+        }
     }
-    return $results
 }

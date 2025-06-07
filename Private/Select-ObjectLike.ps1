@@ -48,7 +48,7 @@ function Select-ObjectLike {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object[]]$InputObject,
+        [object]$InputObject,
 
         [Parameter(Mandatory)]
         [hashtable]$Filter
@@ -91,8 +91,7 @@ function Select-ObjectLike {
                         'notmatch' { if ($itemValue -match $val) { $match = $false; break } }
                         default { $match = $false; break }
                     }
-                }
-                elseif ($filterValue -is [hashtable]) {
+                } elseif ($filterValue -is [hashtable]) {
                     # Nested filter for subobjects/arrays
                     if ($itemValue -is [System.Collections.IEnumerable] -and !$itemValue.GetType().IsPrimitive) {
                         $subMatch = $false
@@ -103,13 +102,11 @@ function Select-ObjectLike {
                             }
                         }
                         if (-not $subMatch) { $match = $false; break }
-                    }
-                    else {
+                    } else {
                         # Exact match for hashtable
                         if ($itemValue -ne $filterValue) { $match = $false; break }
                     }
-                }
-                else {
+                } else {
                     # Exact match
                     if ($itemValue -ne $filterValue) { $match = $false; break }
                 }

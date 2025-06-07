@@ -39,7 +39,7 @@ function Resolve-ForgeConfiguration {
 
         # If assetsPattern has a named capture group, transpose by it
         $resolveParameters = @{
-            InputObject   = $releases
+            InputObject    = $releases
             VersionPattern = $versionPattern
             AssetPattern   = $assetsPattern
         }
@@ -58,14 +58,25 @@ function Resolve-ForgeConfiguration {
     Write-VerboseMark -Message "Added $($allVersions.Count) versions to configuration."
 
     # Query all chocolatey targets
-    $allVersions = $allVersions.version | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build) }  # Discard revision (4th element)
     foreach ($targetName in $Configuration.targets.Keys) {
         $target = $Configuration.targets[$targetName]
-        $target.publishedVersions = Find-ChocolateyPublishedVersions -PackageName $Configuration.package -SourceUrl $target.url
+
+        $findArguments = @{
+            PackageName = $Configuration.package
+            SourceUrl   = $target.url
+        }
+        if ($target.url.StartsWith('https://nuget.pkg.github.com')) { 
+            # GitHub requires username and password (api key).
+            $owner = ($target.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
+            $findArguments['User'] = $owner
+            $findArguments['Password'] = Expand-EnvironmentVariables $target.apiKey
+        }
+
+        $target.publishedVersions = Find-ChocolateyPublishedVersions @findArguments
 
         # Find missing versions: those in allVersions but not in publishedVersions.
-        $pubVersions = $target.publishedVersions | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build) }  # Discard revision (4th element)
-        $target.missingVersions = $allVersions | Where-Object { $pubVersions -notcontains $_ }
+        $pubVersions = $target.publishedVersions | ForEach-Object { [semver]::new($_.Major, $_.Minor, $_.Build) }
+        $target.missingVersions = $allVersions.version | Where-Object { $pubVersions -notcontains $_ }
 
         Write-VerboseMark -Message "Queried target '$targetName' for package info. Found $($target.publishedVersions.Count) published versions, $($target.missingVersions.Count) missing versions."
     }

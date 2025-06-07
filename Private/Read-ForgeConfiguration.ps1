@@ -71,6 +71,6 @@ function Read-ForgeConfiguration {
         }
     }
 
-    Write-VerboseMark -Message "YAML configuration validated successfully."
+    Write-VerboseMark -Message 'YAML configuration validated successfully.'
     return $config
 }

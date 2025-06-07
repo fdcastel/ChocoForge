@@ -16,7 +16,7 @@ function Resolve-GitHubReleases {
         Optional. Script block to construct the version string from $Matches after a successful pattern match. Mutually exclusive with VersionPattern.
 
     .PARAMETER MinimumVersion
-        Optional. Only releases with version greater than or equal to this value are included. Uses [version] comparison. Requires either VersionPattern or VersionScriptBlock.
+        Optional. Only releases with version greater than or equal to this value are included. Uses [semver] comparison. Requires either VersionPattern or VersionScriptBlock.
 
     .PARAMETER AssetPattern
         Optional. Regex pattern with named capture groups to extract asset attributes (e.g. platform, arch, debug). Only assets matching the pattern are included. Named groups are added as properties to each asset.
@@ -37,7 +37,7 @@ function Resolve-GitHubReleases {
         [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'NoVersion')]
         [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionPattern')]
         [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionScriptBlock')]
-        [object[]]$InputObject,
+        [object]$InputObject,
 
         [Parameter(ParameterSetName = 'VersionPattern')]
         [string]$VersionPattern,
@@ -47,7 +47,7 @@ function Resolve-GitHubReleases {
 
         [Parameter(ParameterSetName = 'VersionPattern')]
         [Parameter(ParameterSetName = 'VersionScriptBlock')]
-        [version]$MinimumVersion,
+        [semver]$MinimumVersion,
 
         [Parameter(ParameterSetName = 'NoVersion')]
         [Parameter(ParameterSetName = 'VersionPattern')]
@@ -69,15 +69,14 @@ function Resolve-GitHubReleases {
             if ($PSBoundParameters.ContainsKey('OptionalScript')) {
                 $version = & $VersionScriptBlock
                 $matched = $null -ne $version
-            }
-            elseif ($VersionPattern) {
+            } elseif ($VersionPattern) {
                 $matched = $release.tag_name -match $VersionPattern
                 $version = $matched ? $Matches[1] : $null
             }
 
             # If a version is extracted, add it as a property
             if ($null -ne $version) {
-                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue ([version]$version) -Force
+                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue ([semver]$version) -Force
             } 
 
             if ($matched) {                
