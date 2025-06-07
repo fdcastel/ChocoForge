@@ -20,17 +20,3 @@ targets:
   github:
     url: https://nuget.pkg.github.com/fdcastel/index.json
     apiKey: ${GITHUB_API_KEY}
-
-replacements:
-  # At least one replacement must be defined.
-  - tools/chocolateyinstall.ps1:  # must be an existing file. If relative, it must be relative to this file.
-    - pattern: PLACEHOLDER_VERSION
-      value: '{{version}}'
-    - pattern: PLACEHOLDER_URL32
-      value: '{{assets.win32.url}}'
-    - pattern: PLACEHOLDER_URL64
-      value: '{{assets.win64.url}}'
-    - pattern: PLACEHOLDER_CHECKSUM32
-      value: '{{assets.win32.checksum}}'
-    - pattern: PLACEHOLDER_CHECKSUM64
-      value: '{{assets.win64.checksum}}'

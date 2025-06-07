@@ -27,12 +27,12 @@ function Find-ChocolateyPublishedVersions {
     $defaultSource = 'https://community.chocolatey.org/api/v2/'
     $src = if ($SourceUrl) { $SourceUrl } else { $defaultSource }
 
-    $args = @(
+    $chocoArguments = @(
         'search', $PackageName, '--all', '--exact', '--source', $src,
         '--limit-output', '--skip-compatibility-checks', '--ignore-http-cache'
     )
 
-    $result = Invoke-Chocolatey -Arguments $args
+    $result = Invoke-Chocolatey -Arguments $chocoArguments
     if ($result.ExitCode -ne 0) {
         throw "choco search failed: $($result.StdErr)"
     }

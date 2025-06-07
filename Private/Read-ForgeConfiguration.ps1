@@ -71,29 +71,6 @@ function Read-ForgeConfiguration {
         }
     }
 
-    # Validate 'replacements' (at least one, each with file and at least one pattern/value)
-    if (-not $config.replacements -or $config.replacements.Count -eq 0) {
-        throw "At least one 'replacements' entry is required."
-    }
-    foreach ($replacement in $config.replacements) {
-        $file = $replacement.Keys | Select-Object -First 1
-        $patterns = $replacement[$file]
-        if (-not $file) {
-            throw "A 'replacements' entry is missing the file key."
-        }
-        if (-not $patterns -or $patterns.Count -eq 0) {
-            throw "Replacement for file '$file' must have at least one pattern/value pair."
-        }
-        foreach ($patternEntry in $patterns) {
-            if (-not $patternEntry.pattern) {
-                throw "A replacement entry for file '$file' is missing 'pattern'."
-            }
-            if (-not $patternEntry.value) {
-                throw "A replacement entry for file '$file' is missing 'value'."
-            }
-        }
-    }
-
     Write-VerboseMark -Message "YAML configuration validated successfully."
     return $config
 }
