@@ -47,9 +47,10 @@ function Select-ObjectLike {
 #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory, ValueFromPipeline)]
         [object[]]$InputObject,
-        [Parameter(Mandatory = $true)]
+
+        [Parameter(Mandatory)]
         [hashtable]$Filter
     )
 

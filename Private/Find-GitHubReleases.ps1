@@ -1,9 +1,10 @@
 function Find-GitHubReleases {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [string]$RepositoryOwner,
-        [Parameter(Mandatory = $true)]
+
+        [Parameter(Mandatory)]
         [string]$RepositoryName
     )
 

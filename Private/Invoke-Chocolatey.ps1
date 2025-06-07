@@ -1,11 +1,11 @@
 function Invoke-Chocolatey {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [string[]]$Arguments,
 
         [Parameter()]
-        [string]$WorkingDirectory = $null
+        [string]$WorkingDirectory
     )
 
     $chocoExe = Get-Command choco -ErrorAction SilentlyContinue

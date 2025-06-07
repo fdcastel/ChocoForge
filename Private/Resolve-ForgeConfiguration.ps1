@@ -11,8 +11,8 @@ function Resolve-ForgeConfiguration {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        $Configuration
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [object]$Configuration
     )
 
     Write-VerboseMark -Message 'Starting Resolve-ForgeConfiguration.'

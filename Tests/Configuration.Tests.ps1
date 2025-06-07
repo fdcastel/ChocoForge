@@ -56,44 +56,30 @@ Describe 'Configuration tests' {
         }
 
         It 'Creates a Chocolatey package from a nuspec and context' {
-            $nuspecPath = "$PSScriptRoot/assets/firebird-package/firebird.nuspec"
+            $versionsToTest = @('5.0.1', '3.0.10')
 
-            $context = @{
-                package = 'firebird'
-                version = [version]'5.0.1'
-                tag_name = 'v5.0.1'
-                html_url = 'https://github.com/FirebirdSQL/firebird/releases/tag/v5.0.1'
-                prerelease = $false
-                published_at = Get-Date '2024-08-02T06:10:11Z'
-                assets = @{
-                    x64 = @{
-                        name = 'Firebird-5.0.1.1469-0-windows-x64.exe'
-                        size = 26108905
-                        digest = $null
-                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.1/Firebird-5.0.1.1469-0-windows-x64.exe'
-                    }
-                    x86 = @{
-                        name = 'Firebird-5.0.1.1469-0-windows-x86.exe'
-                        size = 15200752
-                        digest = $null
-                        browser_download_url = 'https://github.com/FirebirdSQL/firebird/releases/download/v5.0.1/Firebird-5.0.1.1469-0-windows-x86.exe'
-                    }
-                }
-            }
+            $nuspecPath = "$PSScriptRoot/assets/firebird-package/firebird.nuspec"
+            $configPath = "$PSScriptRoot/assets/firebird-package/firebird.forge.yaml"
+
+            $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
+            $context = $config.versions | Where-Object { $_.version -in $versionsToTest }
 
             $result = New-ChocolateyPackage -NuspecPath $nuspecPath -Context $context
-            $result | Should -Match 'Successfully created package'
 
-            $nupkg = "$env:TEMP/chocoforge/firebird/firebird.5.0.1.nupkg"
-            $extracted = "$env:TEMP/chocoforge/firebird/_extracted"
-            if (Test-Path $extracted) {
-                Remove-Item -Recurse -Force $extracted
+            foreach ($version in $versionsToTest) {
+                $extracted = "$env:TEMP/chocoforge/firebird/$version/_extracted"
+                if (Test-Path $extracted) {
+                    Remove-Item -Recurse -Force $extracted
+                }
+
+                # Check substitutions in the nupkg
+                $nupkg = "$env:TEMP/chocoforge/firebird/$version/firebird.$version.nupkg"
+                Expand-Archive -Path $nupkg -DestinationPath $extracted -Force
+                Get-Content "$extracted/firebird.nuspec" | Select-Object -Skip 4 -First 1 | Should -Match "<version>$version</version>"
+                Get-Content "$extracted/tools/chocolateyinstall.ps1" | Select-Object -Skip 6 -First 1 | Should -Match "version = '$version'"
+
+                $result | Where-Object { $_ -match "firebird.$version.nupkg" } | Should -Not -BeNullOrEmpty
             }
-
-            # Check substitutions in the nupkg
-            Expand-Archive -Path $nupkg -DestinationPath $extracted -Force
-            Get-Content "$extracted/firebird.nuspec" | Select-Object -Skip 4 -First 1 | Should -Match '<version>5.0.1</version>'
-            Get-Content "$extracted/tools/chocolateyinstall.ps1" | Select-Object -Skip 6 -First 1 | Should -Match "version = '5.0.1'"
         }        
     }
 }
