@@ -8,7 +8,7 @@ $version = '{{version}}'
 $url64 = '{{assets.x64.browser_download_url}}'
 $url32 = '{{assets.x86.browser_download_url}}{{assets.Win32.browser_download_url}}'
 $checksum64 = '{{assets.x64.sha256}}'
-$checksum32 = '{{assets.x86.sha256}}'
+$checksum32 = '{{assets.x86.sha256}}{{assets.Win32.sha256}}'
 $checksumType = 'sha256'
 
 $packageArgs = @{

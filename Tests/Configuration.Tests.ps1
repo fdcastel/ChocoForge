@@ -87,6 +87,9 @@ Describe 'Configuration' {
                         }
 
             $packagesBuilt.Count | Should -Be 2
+
+            Get-Content "$env:TEMP/chocoforge/firebird/5.0.1/_extracted/tools/chocolateyInstall.ps1" | Select-Object -Skip 9 -First 1 | Should -Match "checksum64 = 'dba458a95de9c3a3b297d98601a10dcda95b63bfaee6f72ec4931d6c740bccde'"
+            Get-Content "$env:TEMP/chocoforge/firebird/3.0.10/_extracted/tools/chocolateyInstall.ps1" | Select-Object -Skip 10 -First 1 | Should -Match "checksum32 = 'd4c220bbad1eac9d7578979582a2142ae31778126d300cfcd2b91399238fdaf6'"
         }
     }
 }
