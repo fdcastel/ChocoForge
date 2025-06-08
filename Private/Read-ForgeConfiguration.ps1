@@ -1,16 +1,20 @@
 function Read-ForgeConfiguration {
     <#
     .SYNOPSIS
-        Reads and validates a ChocoForge YAML configuration file.
+        Reads, parses, and validates a ChocoForge YAML configuration file.
 
     .DESCRIPTION
-        Loads a YAML file (see Samples/firebird.forge.yaml for structure), parses it, and validates required fields and structure. Throws on validation errors. Returns the parsed configuration object.
+        Loads a YAML file (see Samples/firebird.forge.yaml for structure), parses it, and validates required fields and structure. Throws on missing or invalid required fields, including 'package', 'releases.source' (must be a GitHub URL), at least one 'releases.flavors' entry (each with 'versionPattern' and 'assetsPattern'), and at least one 'targets' entry (each with 'url' and 'apiKey'). Uses Write-VerboseMark for verbose/debug output. Returns the parsed configuration object.
 
     .PARAMETER Path
         Path to the YAML configuration file.
 
     .EXAMPLE
         Read-ForgeConfiguration -Path 'Samples/firebird.forge.yaml'
+
+    .NOTES
+        - Throws if required fields are missing or invalid.
+        - Uses Write-VerboseMark for verbose output.
     #>
     [CmdletBinding()]
     param(

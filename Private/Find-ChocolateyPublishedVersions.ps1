@@ -4,18 +4,30 @@ function Find-ChocolateyPublishedVersions {
         Returns all published versions of a given package from a Chocolatey repository.
 
     .DESCRIPTION
-        Uses the choco.exe CLI to search for all versions of a package in a Chocolatey-compatible repository. Returns a list of version objects only.
+        Uses the choco.exe CLI to search for all versions of a package in a Chocolatey-compatible repository. Supports authentication via User and Password parameters. Defaults to the community repository if SourceUrl is not specified. Returns a list of [version] objects. Throws on errors.
 
     .PARAMETER PackageName
         The name of the package to search for.
 
     .PARAMETER SourceUrl
-        The Chocolatey repository URL. If not specified, uses the default community repository.
+        The Chocolatey repository URL. If not specified, uses the default community repository (https://community.chocolatey.org/api/v2).
+
+    .PARAMETER User
+        (Optional) The username for authenticating with the repository, if required.
+
+    .PARAMETER Password
+        (Optional) The password or API key for authenticating with the repository, if required.
 
     .EXAMPLE
         Find-ChocolateyPublishedVersions -PackageName 'git'
     .EXAMPLE
         Find-ChocolateyPublishedVersions -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/'
+    .EXAMPLE
+        Find-ChocolateyPublishedVersions -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/' -User 'myuser' -Password 'mypassword'
+
+    .NOTES
+        - Returns a list of [version] objects.
+        - Throws on errors.
     #>
     [CmdletBinding()]
     param(

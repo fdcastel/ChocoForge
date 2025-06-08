@@ -1,3 +1,26 @@
+<#
+    .SYNOPSIS
+        Queries the GitHub API for releases for a given repository.
+
+    .DESCRIPTION
+        Fetches all releases for the specified GitHub repository using the GitHub REST API. Uses the GITHUB_ACCESS_TOKEN environment variable for authentication if available, increasing rate limits. Returns a list of release objects with selected fields and asset information. Provides verbose output for debugging. Throws on errors and warns if the GitHub API rate limit is exceeded.
+
+    .PARAMETER RepositoryOwner
+        The owner (user or organization) of the GitHub repository.
+
+    .PARAMETER RepositoryName
+        The name of the GitHub repository.
+
+    .EXAMPLE
+        Find-GitHubReleases -RepositoryOwner 'firebird' -RepositoryName 'firebird'
+
+    .NOTES
+        - Uses GITHUB_ACCESS_TOKEN from the environment for authenticated requests if available.
+        - Returns release objects with selected fields and asset info.
+        - Warns if the GitHub API rate limit is exceeded.
+        - Uses Write-VerboseMark for verbose output.
+        - Throws on errors.
+#>
 function Find-GitHubReleases {
     [CmdletBinding()]
     param (
@@ -22,17 +45,16 @@ function Find-GitHubReleases {
         }
 
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Verbose:$false
-        # Debug only
-        # $response | ConvertTo-Json -Depth 20 | Out-File -Encoding utf8 -FilePath "$PSScriptRoot/../Tests/assets/github-releases.json" -Force
         Write-VerboseMark -Message "- Received $($response.Count) releases from GitHub API."
 
-        $result = $response | Select-Object `
+        $result = $response | Select-Object @(
             'html_url',
-        'tag_name',
-        'name',
-        'prerelease',
-        'published_at',
-        @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
+            'tag_name',
+            'name',
+            'prerelease',
+            'published_at',
+            @{ Name = 'assets'; Expression = { @($_.assets | Select-Object -Property name, size, digest, browser_download_url) } }
+        )
         return $result
     } catch {
         [string]$errorMessage = $_.Exception.Message

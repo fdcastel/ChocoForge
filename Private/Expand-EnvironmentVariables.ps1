@@ -7,7 +7,7 @@ function Expand-EnvironmentVariables {
     .OUTPUTS
         [string] The expanded string.
     .NOTES
-        Throws if any referenced environment variable is not set.
+        Writes a warning and substitutes missing environment variables with $null. Uses Write-VerboseMark for verbose output when expanding variables.
     #>
     param(
         [Parameter(Mandatory)]

@@ -1,36 +1,28 @@
-function Convert-Template {
-    param([string]$Content, $Context)
-    $Content -replace '{{\s*([\w.]+)\s*}}', {
-        $expr = $_.Groups[1].Value
-        $parts = $expr -split '\.'
-        $val = $Context
-        foreach ($p in $parts) {
-            if ($null -eq $val) { break }
-            $val = $val.$p
-        } 
-        if ($null -eq $val) { 
-            Write-VerboseMark "Missing context value for '$expr'. Returning empty string."
-            return '' 
-        } else { 
-            return $val.ToString() 
-        }
-    }
-}
-
 function Build-ChocolateyPackage {
     <#
     .SYNOPSIS
         Creates one or more Chocolatey packages from a .nuspec file and tools folder, with context-based template substitution.
 
     .DESCRIPTION
-        For each context object (or single object), copies the specified .nuspec file and its sibling ./tools folder to a temp directory, rendering all files with {{ ... }} substitutions from the provided context object. Then runs 'choco pack' in that directory. Optionally outputs to a specified directory.
+        For each context object (or single object), copies the specified .nuspec file and its sibling ./tools folder to a temp directory, rendering all files (including all files in the tools folder, recursively) with {{ ... }} substitutions from the provided context object. Then runs 'choco pack' in that directory. Optionally outputs to a specified directory. Throws if required files/folders are missing or if choco pack fails. Uses Write-VerboseMark for verbose/debug output. Returns the path to the created .nupkg file.
+
+    .PARAMETER Context
+        Context object for template substitutions (must have a 'version' property). Accepts pipeline input.
 
     .PARAMETER NuspecPath
         Path to the .nuspec file.
+
     .PARAMETER OutputPath
         Optional output directory for the .nupkg file.
-    .PARAMETER Context
-        Context object for template substitutions (must have a 'version' property). Accepts pipeline input.
+
+    .EXAMPLE
+        Build-ChocolateyPackage -Context $ctx -NuspecPath 'Samples/firebird.nuspec' -OutputPath 'out/'
+
+    .NOTES
+        - Renders all files in the tools folder recursively with template substitution.
+        - Throws if required files/folders are missing or if choco pack fails.
+        - Uses Write-VerboseMark for verbose output.
+        - Returns the path to the created .nupkg file.
     #>
     [CmdletBinding()]
     param(
@@ -73,7 +65,7 @@ function Build-ChocolateyPackage {
 
         # Render nuspec file
         $nuspecContent = Get-Content -Raw -LiteralPath $nuspecFull
-        $renderedNuspec = Convert-Template -Content $nuspecContent -Context $ctx
+        $renderedNuspec = Expand-Template -Content $nuspecContent -Context $ctx
         $nuspecDest = Join-Path $tempDir ([System.IO.Path]::GetFileName($nuspecFull))
         Set-Content -Path $nuspecDest -Value $renderedNuspec -NoNewline
 
@@ -85,7 +77,7 @@ function Build-ChocolateyPackage {
             $destDir = Split-Path -Parent $destPath
             New-Item -ItemType Directory -Path $destDir -Force | Out-Null 
             $content = Get-Content -Raw -LiteralPath $file.FullName
-            $rendered = Convert-Template -Content $content -Context $ctx
+            $rendered = Expand-Template -Content $content -Context $ctx
             Set-Content -Path $destPath -Value $rendered -NoNewline
         }
 

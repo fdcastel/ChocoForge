@@ -21,7 +21,7 @@ Describe 'Integration' {
             $packagesPushed = $config.versions |
                 Where-Object { $_.version -in $versionsToTest } |
                     Build-ChocolateyPackage -NuspecPath $nuspecPath |
-                        Publish-ChocolateyPackage -TargetUrl $target.url -ApiKey $env:GITHUB_API_KEY -Force -Verbose    
+                        Publish-ChocolateyPackage -TargetUrl $target.url -ApiKey $env:GITHUB_API_KEY -Force
 
             @($packagesPushed).Count | Should -Be 2
         }
