@@ -4,7 +4,9 @@ function Build-ChocolateyPackage {
         Creates one or more Chocolatey packages from a .nuspec file and tools folder, with context-based template substitution.
 
     .DESCRIPTION
-        For each context object (or single object), copies the specified .nuspec file and its sibling ./tools folder to a temp directory, rendering all files (including all files in the tools folder, recursively) with {{ ... }} substitutions from the provided context object. Then runs 'choco pack' in that directory. Optionally outputs to a specified directory. Throws if required files/folders are missing or if choco pack fails. Uses Write-VerboseMark for verbose/debug output. Returns the path to the created .nupkg file.
+        For each context object (or single object), copies the specified .nuspec file and its sibling ./tools folder to a temp directory, rendering all files (including all files in the tools folder, recursively) with {{ ... }} substitutions from the provided context object. Then runs 'choco pack' in that directory. Optionally outputs to a specified directory.
+        
+        Returns the path to the created .nupkg file.
 
     .PARAMETER Context
         Context object for template substitutions (must have a 'version' property). Accepts pipeline input.
@@ -21,10 +23,9 @@ function Build-ChocolateyPackage {
     .NOTES
         - Renders all files in the tools folder recursively with template substitution.
         - Throws if required files/folders are missing or if choco pack fails.
-        - Uses Write-VerboseMark for verbose output.
         - Returns the path to the created .nupkg file.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [object]$Context,
@@ -58,6 +59,14 @@ function Build-ChocolateyPackage {
         $versionStr = $ctx.version.ToString()
         $tempRoot = Join-Path $env:TEMP 'chocoforge'
         $tempDir = Join-Path $tempRoot (Join-Path $nuspecBase $versionStr)
+
+        $expectedOutputPath = $OutputPath ? $OutputPath : $tempDir
+        $expectedPackageName = Join-Path $expectedOutputPath "$nuspecBase.$versionStr.nupkg"
+        if (-not $PSCmdlet.ShouldProcess($expectedPackageName, 'Build Chocolatey package')) {
+            # Return simulated package path. No need to output verbose messages in WhatIf mode.
+            return $expectedPackageName
+        }
+
         if (Test-Path $tempDir) {
             Remove-Item -Recurse -Force $tempDir
         }

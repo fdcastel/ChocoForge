@@ -22,11 +22,22 @@ function Read-ForgeConfiguration {
         [string]$Path
     )
 
+    if (-not $Path) {
+        Write-VerboseMark 'No path provided. Searching for .forge.yaml files in current directory.'
+        $forgeFiles = Get-ChildItem -Path (Get-Location) -Filter '*.forge.yaml' | Select-Object -ExpandProperty FullName
+        if ($forgeFiles.Count -eq 0) {
+            throw 'No .forge.yaml file found in the current directory.'
+        } elseif ($forgeFiles.Count -gt 1) {
+            throw 'Multiple .forge.yaml files found in the current directory. Please specify one.'
+        }
+        $Path = $forgeFiles[0]
+    }
+
     if (-not (Test-Path $Path)) {
         throw "YAML configuration file not found: $Path"
     }
 
-    Write-VerboseMark -Message "Reading YAML configuration from '$Path'"
+    Write-VerboseMark "Using configuration file: $($Path)"
     $config = ConvertFrom-Yaml (Get-Content -Raw -LiteralPath $Path)
 
     # Validate 'package'

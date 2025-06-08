@@ -7,8 +7,11 @@ releases:
     current:
       - versionPattern: 'v(5\.\d+\.\d+)$' # Must be a valid Regex. Required
       - assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$' # Must be a valid Regex. May have a maximum of one capture group. Required.
-    legacy:
-      - versionPattern: 'v([3-4]\.\d+\.\d+)$'
+    v4:
+      - versionPattern: 'v(4\.\d+\.\d+)$'
+      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+    v3:
+      - versionPattern: 'v(3\.\d+\.\d+)$'
       - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
       - minimumVersion: 3.0.10 # Minimum version to consider for updates. Optional, but recommended.
 
@@ -20,3 +23,6 @@ targets:
   github:
     url: https://nuget.pkg.github.com/fdcastel/index.json
     apiKey: ${GITHUB_API_KEY}
+  gitlab:
+    url: "https://gitlab.com/api/v4/projects/70655681/packages/nuget/v2"
+    apiKey: ${GITLAB_API_KEY}

@@ -20,7 +20,7 @@ function Expand-EnvironmentVariables {
             Write-VerboseMark -Message "Expanding environment variable $varName."
             return $envValue
         } else {
-            Write-Warning "Environment variable '$varName' is required but not set."
+            Write-VerboseMark "Environment variable '$varName' is required but not set."
             return $null
         }
     }

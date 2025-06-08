@@ -38,27 +38,27 @@ function Resolve-ForgeConfiguration {
 
     # Expand all flavors and collect versions
     $allVersions = @()
-    foreach ($flavor in $Configuration.releases.flavors.Keys) {
-        $versionPattern = $Configuration.releases.flavors[$flavor].versionPattern
-        $assetsPattern = $Configuration.releases.flavors[$flavor].assetsPattern
-        $minimumVersion = $Configuration.releases.flavors[$flavor].minimumVersion
+    foreach ($flavorName in $Configuration.releases.flavors.Keys) {
+        $flavor = $Configuration.releases.flavors[$flavorName]
 
         # If assetsPattern has a named capture group, transpose by it
         $resolveParameters = @{
             InputObject    = $releases
-            VersionPattern = $versionPattern
-            AssetPattern   = $assetsPattern
+            VersionPattern = $flavor.versionPattern
+            AssetPattern   = $flavor.assetsPattern
         }
-        if ($assetsPattern -match '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') {
+        if ($flavor.assetsPattern -match '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') {
             $resolveParameters['TransposeProperty'] = $Matches[1]
         }
-        if ($minimumVersion) {
-            $resolveParameters['MinimumVersion'] = $minimumVersion
+        if ($flavor.minimumVersion) {
+            $resolveParameters['MinimumVersion'] = $flavor.minimumVersion
         }
-        $expanded = Resolve-GitHubReleases @resolveParameters
-        $allVersions += $expanded
+
+        $versions = Resolve-GitHubReleases @resolveParameters
+        $allVersions += $versions | Add-Member -MemberType NoteProperty -Name 'flavor' -Value $flavorName -PassThru
     }
-    # Flatten, sort by version descending
+
+    # Flatten, sort by version descending and add to configuration
     $allVersions = $allVersions | Sort-Object -Property version -Descending
     $Configuration | Add-Member -NotePropertyName 'versions' -NotePropertyValue $allVersions -Force
     Write-VerboseMark -Message "Added $($allVersions.Count) versions to configuration."
@@ -71,7 +71,7 @@ function Resolve-ForgeConfiguration {
             PackageName = $Configuration.package
             SourceUrl   = $target.url
         }
-        if ($target.url.StartsWith('https://nuget.pkg.github.com')) { 
+        if ($target.url.StartsWith('https://nuget.pkg.github.com')) {
             # GitHub requires username and password (api key).
             $owner = ($target.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
             $findArguments['User'] = $owner
@@ -85,8 +85,30 @@ function Resolve-ForgeConfiguration {
         $target.missingVersions = $allVersions.version | Where-Object { $pubVersions -notcontains $_ }
 
         Write-VerboseMark -Message "Queried target '$targetName' for package info. Found $($target.publishedVersions.Count) published versions, $($target.missingVersions.Count) missing versions."
-    }
-    Write-VerboseMark -Message 'Resolve-ForgeConfiguration completed.'
 
+        # Skip targets that have no API key available for publishing
+        $resolvedApiKey = $null
+        $skipReason = $null
+        $warningMessage = $null
+        if ($target.apiKey) {
+            $resolvedApiKey = Expand-EnvironmentVariables $target.apiKey
+            if (-not $resolvedApiKey) {
+                Write-VerboseMark "Target '$($targetName)' environment variable $($target.apiKey) is not set. Skipping publishing."
+                $skipReason = "Environment variable $($target.apiKey) not set."
+            } elseif ($resolvedApiKey -eq $target.apiKey) {
+                Write-VerboseMark "Target '$($targetName)' has an API key stored in plain text in the configuration file (not recommended). Please consider using and environment variable instead."
+                $warningMessage = 'API key stored in plain text in the configuration file (not recommended).'
+            }
+        } else {
+            Write-VerboseMark "Target '$($targetName)' does not have an API key configured. Skipping publishing."
+            $skipReason = 'No API key in the configuration file'
+        }
+
+        $target | Add-Member -MemberType NoteProperty -Name 'resolvedApiKey' -Value $resolvedApiKey -Force
+        $target | Add-Member -MemberType NoteProperty -Name 'skipReason' -Value $skipReason -Force
+        $target | Add-Member -MemberType NoteProperty -Name 'warningMessage' -Value $warningMessage -Force
+    }
+
+    Write-VerboseMark -Message 'Resolve-ForgeConfiguration completed.'
     return $Configuration
 }

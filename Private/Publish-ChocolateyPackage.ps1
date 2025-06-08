@@ -27,7 +27,7 @@ function Publish-ChocolateyPackage {
         - Throws on errors or if force-push is not supported for the target.
     #>
 
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [string]$Path,
@@ -41,6 +41,12 @@ function Publish-ChocolateyPackage {
     )
 
     process {
+        $forcedSuffix = if ($Force) { ' (forced)' } else { '' }
+        if (-not $PSCmdlet.ShouldProcess($Path, "Publish Chocolatey package to '$TargetUrl'$forcedSuffix")) {
+            # Return simulated package path. No need to output verbose messages in WhatIf mode.
+            return $Path
+        }        
+
         if (-not (Test-Path -LiteralPath $Path)) {
             throw "Package file not found: $Path"
         }
@@ -53,7 +59,7 @@ function Publish-ChocolateyPackage {
             $chocoArguments += @('--api-key', $ApiKey)
         }
 
-        Write-VerboseMark -Message "Pushing package '$Path' to '$TargetUrl'..."
+        Write-VerboseMark -Message "Pushing package '$Path' to '$TargetUrl'$forcedSuffix..."
         $result = Invoke-Chocolatey -Arguments $chocoArguments
         if ($result.ExitCode -eq 0) {
             Write-VerboseMark -Message "Successfully published $Path to $TargetUrl"

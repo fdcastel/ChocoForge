@@ -44,9 +44,10 @@ Describe 'Configuration' {
 
             $config.versions | Should -Not -BeNullOrEmpty
             $config.versions.Length | Should -Be 12  # Minimum version should filter out 3.0.8 and 3.0.9
+            $config.versions | Where-Object { $_.flavor -eq 'v4' } | Should -HaveCount 6
 
             $config.targets | Should -Not -BeNullOrEmpty
-            $config.targets.Keys.Count | Should -Be 2
+            $config.targets.Keys.Count | Should -Be 3
 
             $expectedCommunityVersions = Get-Content "$PSScriptRoot/assets/chocolatey-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
@@ -59,7 +60,7 @@ Describe 'Configuration' {
             $config.targets.github.missingVersions.Length | Should -Be 7
         }
 
-        It 'Creates a Chocolatey package from a nuspec and context' {
+        It 'Builds a Chocolatey package from a nuspec and context' {
             $configPath = "$PSScriptRoot/assets/firebird-package/firebird.forge.yaml"
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
 
