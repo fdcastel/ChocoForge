@@ -1,33 +1,45 @@
 function Find-ChocolateyPublishedVersions {
     <#
     .SYNOPSIS
-        Returns all published versions of a given package from a Chocolatey repository.
+        Lists all published versions of a Chocolatey package from a specified repository.
 
     .DESCRIPTION
-        Uses the choco.exe CLI to search for all versions of a package in a Chocolatey-compatible repository. Supports authentication via User and Password parameters. Defaults to the community repository if SourceUrl is not specified. Returns a list of [version] objects. Throws on errors.
+        Retrieves all available versions of a given package from a Chocolatey-compatible repository using the choco CLI.
+
+        Supports authentication if required. If no repository URL is specified, the default Chocolatey community repository is used. 
+
+        Returns a list of version objects.
 
     .PARAMETER PackageName
-        The name of the package to search for.
+        The name of the Chocolatey package to search for.
 
     .PARAMETER SourceUrl
-        The Chocolatey repository URL. If not specified, uses the default community repository (https://community.chocolatey.org/api/v2).
+        Optional. The URL of the Chocolatey repository. Defaults to the community repository (https://community.chocolatey.org/api/v2) if not specified.
 
     .PARAMETER User
-        (Optional) The username for authenticating with the repository, if required.
+        Optional. The username for authenticating with the repository, if required.
 
     .PARAMETER Password
-        (Optional) The password or API key for authenticating with the repository, if required.
+        Optional. The password or API key for authenticating with the repository, if required.
 
     .EXAMPLE
         Find-ChocolateyPublishedVersions -PackageName 'git'
+        
+        Lists all published versions of the 'git' package from the default Chocolatey repository.
+
     .EXAMPLE
         Find-ChocolateyPublishedVersions -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/'
+        
+        Lists all published versions of the 'git' package from a custom repository.
+
     .EXAMPLE
         Find-ChocolateyPublishedVersions -PackageName 'git' -SourceUrl 'https://myrepo/chocolatey/' -User 'myuser' -Password 'mypassword'
+        
+        Lists all published versions of the 'git' package from a custom repository using authentication.
 
-    .NOTES
-        - Returns a list of [version] objects.
-        - Throws on errors.
+    .OUTPUTS
+        System.Version[]
+        A list of version objects representing all published versions of the package.
     #>
     [CmdletBinding()]
     param(

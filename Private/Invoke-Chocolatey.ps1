@@ -1,23 +1,29 @@
 function Invoke-Chocolatey {
     <#
     .SYNOPSIS
-        Invokes the Chocolatey CLI with specified arguments and returns output and exit code.
+        Runs the Chocolatey CLI with specified arguments and returns output and exit code.
 
     .DESCRIPTION
-        Runs the Chocolatey (choco.exe) command-line tool with the provided arguments. Captures standard output, standard error, and exit code. Optionally sets the working directory. Throws if Chocolatey is not found in the system PATH. Returns a custom object with ExitCode, StdOut, and StdErr properties.
+        Executes the Chocolatey (choco.exe) command-line tool with the provided arguments. 
+        
+        Captures standard output, standard error, and exit code. Optionally sets the working directory. 
+        
+        Returns a custom object with ExitCode, StdOut, and StdErr properties.
 
     .PARAMETER Arguments
         The arguments to pass to choco.exe as a string array.
 
     .PARAMETER WorkingDirectory
-        (Optional) The working directory for the choco process.
+        Optional. The working directory for the choco process.
 
     .EXAMPLE
         Invoke-Chocolatey -Arguments @('push', 'my.nupkg', '--source', 'https://nuget.pkg.github.com/owner/index.json')
+        
+        Runs 'choco push' to publish a package to a custom source.
 
-    .NOTES
-        - Throws if Chocolatey is not found in the system PATH.
-        - Returns a custom object with ExitCode, StdOut, and StdErr.
+    .OUTPUTS
+        PSCustomObject
+        An object with ExitCode, StdOut, and StdErr properties containing the results of the Chocolatey command.
     #>
 
     [CmdletBinding()]

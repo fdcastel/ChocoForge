@@ -1,19 +1,30 @@
 function Resolve-ForgeConfiguration {
     <#
     .SYNOPSIS
-        Enriches a Forge configuration object with GitHub release versions and target package info.
+        Enriches a Forge configuration object with GitHub release versions and target package information.
 
     .DESCRIPTION
-        Receives the output of Read-ForgeConfiguration, parses the GitHub repository from the configuration, fetches all releases, expands them by all flavors, and queries package info for each target. Adds a 'versions' property (containing all expanded releases) to the configuration object. For each target, queries published package versions and computes missing versions. Uses Write-VerboseMark for verbose/debug output. Throws if the GitHub repository URL is invalid.
+        Takes a configuration object from Read-ForgeConfiguration, fetches all releases from the specified GitHub repository, 
+        expands them by all flavors, and queries package information for each target. 
+        
+        Adds a 'versions' property containing all expanded releases to the configuration object. 
+        
+        For each target, adds published and missing version information, as well as API key and publishing status details. 
+        
+        Returns the enriched configuration object.
 
     .PARAMETER Configuration
-        The configuration object returned by Read-ForgeConfiguration. This object is enriched with a 'versions' property and updated 'targets' info.
+        The configuration object returned by Read-ForgeConfiguration. This object is enriched with a 'versions' property and updated 'targets' information.
 
-    .NOTES
-        - Adds a 'versions' property to the configuration, containing all expanded releases.
-        - For each target, adds 'publishedVersions' and 'missingVersions' properties.
-        - Uses Write-VerboseMark for verbose output.
-        - Throws if the GitHub repository URL is invalid.
+    .EXAMPLE
+        $config = Read-ForgeConfiguration -Path 'Samples/firebird.forge.yaml'
+        $resolved = Resolve-ForgeConfiguration -Configuration $config
+        
+        Enriches the configuration with release and target package information.
+
+    .OUTPUTS
+        PSCustomObject
+        The enriched configuration object, including expanded releases and target publishing information.
     #>
     [CmdletBinding()]
     param(

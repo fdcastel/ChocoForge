@@ -1,4 +1,21 @@
 function Sync-ForgePackage {
+    <#
+    .SYNOPSIS
+        Builds and publishes missing Chocolatey packages for all targets defined in a ChocoForge YAML configuration.
+
+    .DESCRIPTION
+        Reads and resolves a ChocoForge YAML configuration file using Read-ForgeConfiguration and Resolve-ForgeConfiguration. For each target, builds and publishes any missing package versions, skipping targets with a skipReason. Provides verbose output for all major steps and displays a summary of published and skipped targets. Throws on unexpected errors or if no packages are built when expected.
+
+    .PARAMETER Path
+        Path to the YAML configuration file. If not provided, auto-discovery is handled by Read-ForgeConfiguration.
+
+    .EXAMPLE
+        Sync-ForgePackage -Path 'Samples/firebird.forge.yaml'
+
+    .NOTES
+        - Displays a summary of published and skipped targets.
+        - Throws on unexpected errors or if no packages are built.
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Position = 0)]

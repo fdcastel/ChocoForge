@@ -1,11 +1,22 @@
 function Write-ForgeConfiguration {
     <#
     .SYNOPSIS
-        Writes a summary of the Forge configuration object to the host, with colorized output for human readability.
+        Writes a summary of the Forge configuration object to the host, with colorized output for easy reading.
+
     .DESCRIPTION
-        Displays key information about the resolved configuration.
+        Displays key information about the resolved Forge configuration, including package name, targets, publishing status, flavors, and version details. 
+        
     .PARAMETER Configuration
-        The resolved configuration object (output of Resolve-ForgeConfiguration).
+        The resolved configuration object (output of Resolve-ForgeConfiguration) to display.
+
+    .EXAMPLE
+        $resolved = Resolve-ForgeConfiguration -Configuration $config
+        Write-ForgeConfiguration -Configuration $resolved
+        
+        Displays a colorized summary of the resolved configuration and publishing status.
+
+    .OUTPUTS
+        None. Writes formatted summary information to the host.
     #>
     [CmdletBinding()]
     param(

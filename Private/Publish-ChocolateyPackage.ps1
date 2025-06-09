@@ -4,7 +4,11 @@ function Publish-ChocolateyPackage {
         Publishes a Chocolatey package file to a target repository, with optional force-push for GitHub NuGet feeds.
 
     .DESCRIPTION
-        Pushes a .nupkg package to the specified Chocolatey/NuGet repository using choco push. Supports GitHub NuGet feeds and can force-push by deleting an existing version if a conflict occurs (409 Conflict) and -Force is specified. Uses Write-VerboseMark for verbose/debug output. Throws on errors.
+        Pushes a .nupkg package to the specified Chocolatey or NuGet repository using choco push. 
+        
+        Supports GitHub NuGet feeds and can force-push by deleting an existing version if a conflict occurs (409 Conflict) and -Force is specified. 
+        
+        Returns the path to the published package file.
 
     .PARAMETER Path
         Path to the .nupkg package file to publish.
@@ -13,18 +17,19 @@ function Publish-ChocolateyPackage {
         The repository URL to push the package to.
 
     .PARAMETER ApiKey
-        (Optional) API key for authenticating with the target repository.
+        Optional. API key for authenticating with the target repository.
 
     .PARAMETER Force
-        (Switch) If specified and a 409 Conflict occurs on GitHub, deletes the existing version and retries the push.
+        If specified and a 409 Conflict occurs on GitHub, deletes the existing version and retries the push. Only supported for GitHub NuGet feeds.
 
     .EXAMPLE
         Publish-ChocolateyPackage -Path 'out/firebird.4.0.0.nupkg' -TargetUrl 'https://nuget.pkg.github.com/owner/index.json' -ApiKey $env:GITHUB_TOKEN -Force
+        
+        Publishes the specified package to a GitHub NuGet feed, force-pushing if a version conflict occurs.
 
-    .NOTES
-        - Only GitHub NuGet feeds support force-push via version deletion.
-        - Uses Write-VerboseMark for verbose output.
-        - Throws on errors or if force-push is not supported for the target.
+    .OUTPUTS
+        System.String
+        The path to the published .nupkg package file.
     #>
 
     [CmdletBinding(SupportsShouldProcess)]

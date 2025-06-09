@@ -1,29 +1,42 @@
 function Build-ChocolateyPackage {
     <#
     .SYNOPSIS
-        Creates one or more Chocolatey packages from a .nuspec file and tools folder, with context-based template substitution.
+        Builds one or more Chocolatey packages from a .nuspec file and tools folder, using template substitution for customization.
 
     .DESCRIPTION
-        For each context object (or single object), copies the specified .nuspec file and its sibling ./tools folder to a temp directory, rendering all files (including all files in the tools folder, recursively) with {{ ... }} substitutions from the provided context object. Then runs 'choco pack' in that directory. Optionally outputs to a specified directory.
-        
-        Returns the path to the created .nupkg file.
+        For each provided context object, this function copies the specified .nuspec file and its sibling ./tools folder to a temporary directory,
+        performing template substitution on all files using the context.
+
+        It then runs 'choco pack' to create a Chocolatey package.
+
+        You can optionally specify an output directory for the resulting .nupkg file(s).
+
+        Returns the path to each created .nupkg file.
 
     .PARAMETER Context
-        Context object for template substitutions (must have a 'version' property). Accepts pipeline input.
+        The context object for template substitutions. Must include a 'version' property. Accepts pipeline input for processing multiple packages in one call.
 
     .PARAMETER NuspecPath
-        Path to the .nuspec file.
+        Path to the .nuspec file to use as the package template.
 
     .PARAMETER OutputPath
-        Optional output directory for the .nupkg file.
+        Optional. Directory where the resulting .nupkg file will be placed. If not specified, the package is created in a temporary directory.
 
     .EXAMPLE
         Build-ChocolateyPackage -Context $ctx -NuspecPath 'Samples/firebird.nuspec' -OutputPath 'out/'
 
+        Creates a Chocolatey package using the provided context and nuspec file, placing the result in the 'out/' directory.
+
+    .EXAMPLE
+        $contexts | Build-ChocolateyPackage -NuspecPath 'Samples/firebird.nuspec'
+
+        Builds packages for each context object in the pipeline, using the specified nuspec file.
+
+    .OUTPUTS
+        System.String. The path to the created .nupkg file for each context object.
+
     .NOTES
-        - Renders all files in the tools folder recursively with template substitution.
-        - Throws if required files/folders are missing or if choco pack fails.
-        - Returns the path to the created .nupkg file.
+        Supports -WhatIf and -Confirm for safe execution.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -84,7 +97,7 @@ function Build-ChocolateyPackage {
             $relPath = $file.FullName.Substring($toolsDir.Length).TrimStart('/', '\')
             $destPath = Join-Path $tempDir (Join-Path 'tools' $relPath)
             $destDir = Split-Path -Parent $destPath
-            New-Item -ItemType Directory -Path $destDir -Force | Out-Null 
+            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
             $content = Get-Content -Raw -LiteralPath $file.FullName
             $rendered = Expand-Template -Content $content -Context $ctx
             Set-Content -Path $destPath -Value $rendered -NoNewline

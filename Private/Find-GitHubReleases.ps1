@@ -1,9 +1,13 @@
 <#
     .SYNOPSIS
-        Queries the GitHub API for releases for a given repository.
+        Lists all releases for a specified GitHub repository.
 
     .DESCRIPTION
-        Fetches all releases for the specified GitHub repository using the GitHub REST API. Uses the GITHUB_ACCESS_TOKEN environment variable for authentication if available, increasing rate limits. Returns a list of release objects with selected fields and asset information. Provides verbose output for debugging. Throws on errors and warns if the GitHub API rate limit is exceeded.
+        Retrieves all releases for the given GitHub repository using the GitHub REST API. 
+        
+        If the GITHUB_ACCESS_TOKEN environment variable is set, authenticated requests are used to increase rate limits. 
+        
+        Returns a list of release objects with selected fields and asset information. Warns if the GitHub API rate limit is exceeded.
 
     .PARAMETER RepositoryOwner
         The owner (user or organization) of the GitHub repository.
@@ -13,13 +17,12 @@
 
     .EXAMPLE
         Find-GitHubReleases -RepositoryOwner 'firebird' -RepositoryName 'firebird'
+        
+        Lists all releases for the 'firebird/firebird' repository.
 
-    .NOTES
-        - Uses GITHUB_ACCESS_TOKEN from the environment for authenticated requests if available.
-        - Returns release objects with selected fields and asset info.
-        - Warns if the GitHub API rate limit is exceeded.
-        - Uses Write-VerboseMark for verbose output.
-        - Throws on errors.
+    .OUTPUTS
+        PSCustomObject[]
+        A list of release objects, each including fields such as html_url, tag_name, name, prerelease, published_at, and an array of asset information (name, size, digest, browser_download_url).
 #>
 function Find-GitHubReleases {
     [CmdletBinding()]

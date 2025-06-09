@@ -1,50 +1,54 @@
 function Select-ObjectLike {
-    <#+
-.SYNOPSIS
-    Filters an array of objects using a flexible hashtable-based filter syntax.
+    <#
+    .SYNOPSIS
+        Filters an array of objects using a flexible hashtable-based filter syntax.
 
-.DESCRIPTION
-    Select-ObjectLike allows you to filter objects (including nested arrays and properties) using a hashtable filter. 
-    Supports exact match, comparison operators (>, <, >=, <=, ==, !=, gt, lt, ge, le, eq, ne), and regex matching (match, notmatch).
-    Nested filters are supported for subobjects and arrays.
+    .DESCRIPTION
+        Filters objects (including nested arrays and properties) using a hashtable filter. 
+        
+        Supports exact match, comparison operators (>, <, >=, <=, ==, !=, gt, lt, ge, le, eq, ne), and regex matching (match, notmatch). 
+        
+        Nested filters are supported for subobjects and arrays. 
+        
+        Returns all objects that match the filter criteria.
 
-.PARAMETER InputObject
-    The array of objects to filter.
+    .PARAMETER InputObject
+        The array of objects to filter.
 
-.PARAMETER Filter
-    A hashtable describing the filter. Keys are property names, values are:
-      - a literal value (for exact match)
-      - a hashtable with 'op' and 'value' keys for operator-based filtering
-      - a nested hashtable for subobject/array filtering
+    .PARAMETER Filter
+        A hashtable describing the filter. Keys are property names, values can be:
+          - a literal value (for exact match)
+          - a hashtable with 'op' and 'value' keys for operator-based filtering
+          - a nested hashtable for subobject/array filtering
 
-.FILTER STRUCTURE
-    # Exact match:
-    $filter = @{ tag_name = 'v5.0.2' }
+    .FILTER STRUCTURE
+        # Exact match:
+        $filter = @{ tag_name = 'v5.0.2' }
 
-    # Comparison:
-    $filter = @{ published_at = @{ op = 'gt'; value = '2025-01-01' } }
-    $filter = @{ size = @{ op = 'le'; value = 100000000 } }
+        # Comparison:
+        $filter = @{ published_at = @{ op = 'gt'; value = '2025-01-01' } }
+        $filter = @{ size = @{ op = 'le'; value = 100000000 } }
 
-    # Regex:
-    $filter = @{ tag_name = @{ op = 'match'; value = '^v5\.' } }
-    $filter = @{ tag_name = @{ op = 'notmatch'; value = '^v4\.' } }
+        # Regex:
+        $filter = @{ tag_name = @{ op = 'match'; value = '^v5\.' } }
+        $filter = @{ tag_name = @{ op = 'notmatch'; value = '^v4\.' } }
 
-    # Nested/array:
-    $filter = @{ assets = @{ name = 'Firebird-5.0.2.1613-0-android-arm32.tar.gz' } }
-    $filter = @{ assets = @{ size = @{ op = 'gt'; value = 100000000 } } }
+        # Nested/array:
+        $filter = @{ assets = @{ name = 'Firebird-5.0.2.1613-0-android-arm32.tar.gz' } }
+        $filter = @{ assets = @{ size = @{ op = 'gt'; value = 100000000 } } }
 
-.EXAMPLE
-    $result = Select-ObjectLike -InputObject $releases -Filter @{ tag_name = @{ op = 'match'; value = '^v5\.' } }
-    # Returns all releases with tag_name starting with 'v5.'
+    .EXAMPLE
+        $result = Select-ObjectLike -InputObject $releases -Filter @{ tag_name = @{ op = 'match'; value = '^v5\.' } }
+        # Returns all releases with tag_name starting with 'v5.'
 
-.EXAMPLE
-    $result = Select-ObjectLike -InputObject $releases -Filter @{ assets = @{ size = @{ op = 'gt'; value = 100000000 } } }
-    # Returns all releases with at least one asset over 100MB
+    .EXAMPLE
+        $result = Select-ObjectLike -InputObject $releases -Filter @{ assets = @{ size = @{ op = 'gt'; value = 100000000 } } }
+        # Returns all releases with at least one asset over 100MB
 
-.NOTES
-    - Only one filter per property is supported.
-    - For nested arrays, the parent object is included if any subobject matches the sub-filter.
-#>
+    .OUTPUTS
+        PSCustomObject[]
+        An array of objects matching the filter criteria.
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]

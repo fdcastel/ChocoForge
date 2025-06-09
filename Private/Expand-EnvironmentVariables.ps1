@@ -6,8 +6,6 @@ function Expand-EnvironmentVariables {
         The string to expand.
     .OUTPUTS
         [string] The expanded string.
-    .NOTES
-        Writes a warning and substitutes missing environment variables with $null. Uses Write-VerboseMark for verbose output when expanding variables.
     #>
     param(
         [Parameter(Mandatory)]

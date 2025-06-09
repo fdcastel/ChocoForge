@@ -3,16 +3,15 @@
         Expands template placeholders in a string using values from a context object.
 
     .DESCRIPTION
-        Replaces all template expressions of the form {{ property }} or {{ property.subproperty }} in the input string with corresponding values from the provided context object. Supports both simple and nested properties using dot notation.
+        Replaces all template expressions of the form {{ property }} or {{ property.subproperty }} in the input string with 
+        corresponding values from the provided context object. Supports both simple and nested properties using dot notation.
         
-        Special handling is provided for placeholders ending in '.sha256' (e.g., {{ asset.sha256 }}):
-        - If the context object contains a 'browser_download_url' property for the parent object, the function downloads the file, computes its SHA256 hash, and caches the result for 24 hours in a JSON file in the user's TEMP directory.
-        - Cached hashes are reused if available and not expired (24 hours).
-        - Verbose messages are written for cache usage, cache errors, downloads, and hash calculations using Write-VerboseMark.
+        If a context value is missing, the placeholder is replaced with an empty string.
 
-        If a context value is missing, the placeholder is replaced with an empty string and a verbose message is written using Write-VerboseMark.
+        For placeholders ending in '.sha256' (e.g., {{ asset.sha256 }}), if the parent object contains a 'browser_download_url' 
+        property, the function will automatically download the file, calculate its SHA256 hash, and cache the result for 24 hours. 
 
-        The function returns the expanded string with all placeholders replaced.
+        Returns the expanded string with all placeholders replaced.
 
     .PARAMETER Content
         The template string containing placeholders to expand.
@@ -24,14 +23,10 @@
         Expand-Template -Content 'Hello, {{ user.name }}!' -Context @{ user = @{ name = 'World' } }
 
     .EXAMPLE
-        # Example with SHA256 hash expansion and caching
         Expand-Template -Content 'SHA256: {{ asset.sha256 }}' -Context @{ asset = @{ browser_download_url = 'https://example.com/file.zip' } }
 
-    .NOTES
-        - Missing context values are replaced with an empty string and a verbose message is written.
-        - Placeholders ending in '.sha256' trigger download, hash calculation, and caching if a 'browser_download_url' is present.
-        - Uses Write-VerboseMark for verbose output on missing values, cache usage, and errors.
-        - Returns the expanded string.
+    .OUTPUTS
+        System.String. The expanded string with all placeholders replaced.
 #>
 function Expand-Template {
     param([string]$Content, $Context)
@@ -57,7 +52,6 @@ function Expand-Template {
                     return Get-Sha256FromUrlWithCache -Url $parentVal.browser_download_url
                 }
             }
-            Write-VerboseMark "Missing context value for '$expr'. Returning empty string."
             return ''
         } else {
             return $val.ToString()

@@ -4,17 +4,34 @@ function Read-ForgeConfiguration {
         Reads, parses, and validates a ChocoForge YAML configuration file.
 
     .DESCRIPTION
-        Loads a YAML file (see Samples/firebird.forge.yaml for structure), parses it, and validates required fields and structure. Throws on missing or invalid required fields, including 'package', 'releases.source' (must be a GitHub URL), at least one 'releases.flavors' entry (each with 'versionPattern' and 'assetsPattern'), and at least one 'targets' entry (each with 'url' and 'apiKey'). Uses Write-VerboseMark for verbose/debug output. Returns the parsed configuration object.
+        Loads a ChocoForge YAML configuration file, parses it, and validates that all required fields and structure are present. 
+        
+        If no path is provided, the function will search for a single .forge.yaml file in the current directory. 
+        
+        Returns the parsed configuration as a PowerShell custom object.
+
+        Required fields include:
+        - 'package'
+        - 'releases.source' (must be a GitHub URL)
+        - At least one 'releases.flavors' entry (each must have 'versionPattern' and 'assetsPattern')
+        - At least one 'targets' entry (each must have 'url' and 'apiKey')
 
     .PARAMETER Path
-        Path to the YAML configuration file.
+        Path to the YAML configuration file. If not provided, the function will search for a single .forge.yaml file in the current directory.
 
     .EXAMPLE
         Read-ForgeConfiguration -Path 'Samples/firebird.forge.yaml'
+        
+        Loads and validates the specified configuration file.
 
-    .NOTES
-        - Throws if required fields are missing or invalid.
-        - Uses Write-VerboseMark for verbose output.
+    .EXAMPLE
+        Read-ForgeConfiguration
+        
+        Auto-discovers and loads a .forge.yaml file in the current directory if only one exists.
+
+    .OUTPUTS
+        PSCustomObject
+        The parsed and validated configuration object.
     #>
     [CmdletBinding()]
     param(

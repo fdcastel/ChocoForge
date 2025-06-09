@@ -1,36 +1,41 @@
 function Resolve-GitHubReleases {
     <#
     .SYNOPSIS
-        Adds a 'version' property to each GitHub release object and optionally filters by minimum version. Optionally extracts asset attributes using a regex with named capture groups. Can also transpose the assets array into a hashtable keyed by a specified property.
+        Adds a 'version' property to each GitHub release object and optionally filters and transforms assets.
 
     .DESCRIPTION
-        Receives the output of Find-GitHubReleases. Adds a 'version' property to each release, extracted from 'tag_name' using a regex pattern if provided. You may specify -VersionPattern or -VersionScriptBlock, or both (if both are provided, VersionPattern is used for matching and VersionScriptBlock for formatting the version string). If -MinimumVersion is provided, only releases with version greater than or equal to this value are included, and this requires either -VersionPattern or -VersionScriptBlock. If -AssetPattern is provided, each asset is matched against the pattern and all named capture groups are added as properties; only matching assets are included. If -TransposeProperty is provided, the assets array is transposed into a hashtable keyed by the specified property, and the key property is removed from each asset object in the output (currently always removes 'arch').
+        Processes an array of GitHub release objects (from Find-GitHubReleases), extracting a version from each release using a regex pattern or script block. 
+        
+        Optionally filters releases by minimum version. 
+        
+        If an asset pattern is provided, only matching assets are included and named capture groups are added as properties. 
+        
+        If a transpose property is specified, the assets array is converted to a hashtable keyed by that property.
 
     .PARAMETER InputObject
-        The array of release objects (output of Find-GitHubReleases).
+        The array of release objects to process (output of Find-GitHubReleases).
 
     .PARAMETER VersionPattern
-        Optional. Regex pattern with a capture group to extract the version from tag_name. If not provided, tag_name is used as-is. If both VersionPattern and VersionScriptBlock are provided, VersionPattern is used for matching and VersionScriptBlock for formatting the version string.
+        Optional. Regex pattern with a capture group to extract the version from tag_name. If both VersionPattern and VersionScriptBlock are provided, VersionPattern is used for matching and VersionScriptBlock for formatting the version string.
 
     .PARAMETER VersionScriptBlock
         Optional. Script block to construct the version string from $Matches after a successful pattern match. Used only if VersionPattern is provided and matches.
 
     .PARAMETER MinimumVersion
-        Optional. Only releases with version greater than or equal to this value are included. Uses [semver] comparison. Requires either VersionPattern or VersionScriptBlock.
+        Optional. Only releases with version greater than or equal to this value are included. Requires either VersionPattern or VersionScriptBlock.
 
     .PARAMETER AssetPattern
-        Optional. Regex pattern with named capture groups to extract asset attributes (e.g. platform, arch, debug). Only assets matching the pattern are included. Named groups are added as properties to each asset.
+        Optional. Regex pattern with named capture groups to extract asset attributes. Only assets matching the pattern are included, and named groups are added as properties.
 
     .PARAMETER TransposeProperty
-        Optional. If provided, the assets array is transposed into a hashtable keyed by this property (e.g. 'arch'), and the key property is removed from each asset object in the output. (Note: currently always removes 'arch', regardless of the property specified.)
+        Optional. If provided, the assets array is converted to a hashtable keyed by this property, and the key property is removed from each asset object in the output.
 
     .EXAMPLE
-        $expanded = Find-GitHubReleases ... | Resolve-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
+        $expanded = Find-GitHubReleases ... | Resolve-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\\d.]+-\\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
 
-    .NOTES
-        - If both VersionPattern and VersionScriptBlock are provided, VersionPattern is used for matching and VersionScriptBlock for formatting the version string.
-        - MinimumVersion can only be used if one of the above is provided.
-        - If TransposeProperty is used, the key property is removed from each asset in the output (currently always removes 'arch').
+    .OUTPUTS
+        PSCustomObject[]
+        An array of release objects with added version and asset properties, optionally filtered and transformed.
     #>
     [CmdletBinding(DefaultParameterSetName = 'NoVersion')]
     param(
