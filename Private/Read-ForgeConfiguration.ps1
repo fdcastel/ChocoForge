@@ -53,9 +53,8 @@ function Read-ForgeConfiguration {
     if (-not (Test-Path $Path)) {
         throw "YAML configuration file not found: $Path"
     }
-
     Write-VerboseMark "Using configuration file: $($Path)"
-    $config = ConvertFrom-Yaml (Get-Content -Raw -LiteralPath $Path)
+    $config = ConvertFrom-Yaml (Get-Content -Raw -LiteralPath $Path) -Ordered
 
     # Validate 'package'
     if (-not $config.package) {
