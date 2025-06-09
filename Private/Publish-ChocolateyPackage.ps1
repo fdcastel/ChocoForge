@@ -57,8 +57,7 @@ function Publish-ChocolateyPackage {
         }
 
         $chocoArguments = @(
-            'push', $Path, '--source', $SourceUrl,
-            '--skip-compatibility-checks', '--limit-output'
+            'push', $Path, '--source', $SourceUrl, '--limit-output'
         )
         if ($ApiKey) {
             $chocoArguments += @('--api-key', $ApiKey)

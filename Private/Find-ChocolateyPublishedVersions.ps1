@@ -53,13 +53,13 @@ function Find-ChocolateyPublishedVersions {
     $SourceUrl = $SourceUrl ? $SourceUrl : 'https://community.chocolatey.org/api/v2'
 
     $chocoArguments = @(
-        'search', $PackageName, '--all', '--exact', '--source', $SourceUrl,
-        '--skip-compatibility-checks', '--ignore-http-cache', '--limit-output' 
+        'search', $PackageName, '--all', '--exact', '--source', $SourceUrl, '--ignore-http-cache', '--limit-output'
     )
     if ($User -and $Password) {
         $chocoArguments += @('--user', $User, '--password', $Password)
     }
 
+    Write-VerboseMark -Message "Searching for published versions of package '$PackageName' in source '$SourceUrl'."
     $result = Invoke-Chocolatey -Arguments $chocoArguments
     if ($result.ExitCode -ne 0) {
         throw "choco search failed: $($result.StdOut)"

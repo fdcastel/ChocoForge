@@ -24,5 +24,6 @@ sources:
     url: https://nuget.pkg.github.com/fdcastel/index.json
     apiKey: ${GITHUB_API_KEY}
   gitlab:
-    url: "https://gitlab.com/api/v4/projects/70655681/packages/nuget/v2"
+    url: https://gitlab.com/api/v4/projects/70655681/packages/nuget/index.json
+    username: fdcastel
     apiKey: ${GITLAB_API_KEY}

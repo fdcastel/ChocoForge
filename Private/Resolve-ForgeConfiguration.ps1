@@ -82,10 +82,36 @@ function Resolve-ForgeConfiguration {
             PackageName = $Configuration.package
             SourceUrl   = $source.url
         }
+
         if ($source.url.StartsWith('https://nuget.pkg.github.com')) {
             # GitHub requires username and password (api key).
-            $owner = ($source.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
-            $findArguments['User'] = $owner
+
+            # GitHub username is always the owner from the URL.
+            $userName = ($source.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
+
+            $password = Expand-EnvironmentVariables $source.apiKey
+            if (-not $password) {
+                throw "GitHub source '$sourceName' requires the environment variable $($source.apiKey) to be set."
+            }
+
+            $findArguments['User'] = $userName
+            $findArguments['Password'] = $password
+        }
+
+        if ($source.url.StartsWith('https://gitlab.com')) {
+            # GitLab requires username and password (api key).
+
+            $userName = $source.username
+            if (-not $userName) {
+                throw "GitLab source '$sourceName' requires a username to be set in the configuration."
+            }
+
+            $password = Expand-EnvironmentVariables $source.apiKey
+            if (-not $password) {
+                throw "GitLab source '$sourceName' requires the environment variable $($source.apiKey) to be set."
+            }
+
+            $findArguments['User'] = $source.username
             $findArguments['Password'] = Expand-EnvironmentVariables $source.apiKey
         }
 
