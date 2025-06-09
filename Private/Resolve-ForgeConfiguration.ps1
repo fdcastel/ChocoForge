@@ -1,30 +1,30 @@
 function Resolve-ForgeConfiguration {
     <#
     .SYNOPSIS
-        Enriches a Forge configuration object with GitHub release versions and target package information.
+        Enriches a Forge configuration object with GitHub release versions and source package information.
 
     .DESCRIPTION
         Takes a configuration object from Read-ForgeConfiguration, fetches all releases from the specified GitHub repository, 
-        expands them by all flavors, and queries package information for each target. 
+        expands them by all flavors, and queries package information for each source. 
         
         Adds a 'versions' property containing all expanded releases to the configuration object. 
         
-        For each target, adds published and missing version information, as well as API key and publishing status details. 
+        For each source, adds published and missing version information, as well as API key and publishing status details. 
         
         Returns the enriched configuration object.
 
     .PARAMETER Configuration
-        The configuration object returned by Read-ForgeConfiguration. This object is enriched with a 'versions' property and updated 'targets' information.
+        The configuration object returned by Read-ForgeConfiguration. This object is enriched with a 'versions' property and updated 'sources' information.
 
     .EXAMPLE
         $config = Read-ForgeConfiguration -Path 'Samples/firebird.forge.yaml'
         $resolved = Resolve-ForgeConfiguration -Configuration $config
         
-        Enriches the configuration with release and target package information.
+        Enriches the configuration with release and source package information.
 
     .OUTPUTS
         PSCustomObject
-        The enriched configuration object, including expanded releases and target publishing information.
+        The enriched configuration object, including expanded releases and source publishing information.
     #>
     [CmdletBinding()]
     param(
@@ -74,50 +74,50 @@ function Resolve-ForgeConfiguration {
     $Configuration | Add-Member -NotePropertyName 'versions' -NotePropertyValue $allVersions -Force
     Write-VerboseMark -Message "Added $($allVersions.Count) versions to configuration."
 
-    # Query all chocolatey targets
-    foreach ($targetName in $Configuration.targets.Keys) {
-        $target = $Configuration.targets[$targetName]
+    # Query all chocolatey sources
+    foreach ($sourceName in $Configuration.sources.Keys) {
+        $source = $Configuration.sources[$sourceName]
 
         $findArguments = @{
             PackageName = $Configuration.package
-            SourceUrl   = $target.url
+            SourceUrl   = $source.url
         }
-        if ($target.url.StartsWith('https://nuget.pkg.github.com')) {
+        if ($source.url.StartsWith('https://nuget.pkg.github.com')) {
             # GitHub requires username and password (api key).
-            $owner = ($target.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
+            $owner = ($source.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
             $findArguments['User'] = $owner
-            $findArguments['Password'] = Expand-EnvironmentVariables $target.apiKey
+            $findArguments['Password'] = Expand-EnvironmentVariables $source.apiKey
         }
 
-        $target.publishedVersions = Find-ChocolateyPublishedVersions @findArguments
+        $source.publishedVersions = Find-ChocolateyPublishedVersions @findArguments
 
         # Find missing versions: those in allVersions but not in publishedVersions.
-        $pubVersions = $target.publishedVersions | ForEach-Object { [semver]::new($_.Major, $_.Minor, $_.Build) }
-        $target.missingVersions = $allVersions.version | Where-Object { $pubVersions -notcontains $_ }
+        $pubVersions = $source.publishedVersions | ForEach-Object { [semver]::new($_.Major, $_.Minor, $_.Build) }
+        $source.missingVersions = $allVersions.version | Where-Object { $pubVersions -notcontains $_ }
 
-        Write-VerboseMark -Message "Queried target '$targetName' for package info. Found $($target.publishedVersions.Count) published versions, $($target.missingVersions.Count) missing versions."
+        Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($source.publishedVersions.Count) published versions, $($source.missingVersions.Count) missing versions."
 
-        # Skip targets that have no API key available for publishing
+        # Skip sources that have no API key available for publishing
         $resolvedApiKey = $null
         $skipReason = $null
         $warningMessage = $null
-        if ($target.apiKey) {
-            $resolvedApiKey = Expand-EnvironmentVariables $target.apiKey
+        if ($source.apiKey) {
+            $resolvedApiKey = Expand-EnvironmentVariables $source.apiKey
             if (-not $resolvedApiKey) {
-                Write-VerboseMark "Target '$($targetName)' environment variable $($target.apiKey) is not set. Skipping publishing."
-                $skipReason = "Environment variable $($target.apiKey) not set."
-            } elseif ($resolvedApiKey -eq $target.apiKey) {
-                Write-VerboseMark "Target '$($targetName)' has an API key stored in plain text in the configuration file (not recommended). Please consider using and environment variable instead."
+                Write-VerboseMark "Source '$($sourceName)' environment variable $($source.apiKey) is not set. Skipping publishing."
+                $skipReason = "Environment variable $($source.apiKey) not set."
+            } elseif ($resolvedApiKey -eq $source.apiKey) {
+                Write-VerboseMark "Source '$($sourceName)' has an API key stored in plain text in the configuration file (not recommended). Please consider using and environment variable instead."
                 $warningMessage = 'API key stored in plain text in the configuration file (not recommended).'
             }
         } else {
-            Write-VerboseMark "Target '$($targetName)' does not have an API key configured. Skipping publishing."
+            Write-VerboseMark "Source '$($sourceName)' does not have an API key configured. Skipping publishing."
             $skipReason = 'No API key in the configuration file'
         }
 
-        $target | Add-Member -MemberType NoteProperty -Name 'resolvedApiKey' -Value $resolvedApiKey -Force
-        $target | Add-Member -MemberType NoteProperty -Name 'skipReason' -Value $skipReason -Force
-        $target | Add-Member -MemberType NoteProperty -Name 'warningMessage' -Value $warningMessage -Force
+        $source | Add-Member -MemberType NoteProperty -Name 'resolvedApiKey' -Value $resolvedApiKey -Force
+        $source | Add-Member -MemberType NoteProperty -Name 'skipReason' -Value $skipReason -Force
+        $source | Add-Member -MemberType NoteProperty -Name 'warningMessage' -Value $warningMessage -Force
     }
 
     Write-VerboseMark -Message 'Resolve-ForgeConfiguration completed.'

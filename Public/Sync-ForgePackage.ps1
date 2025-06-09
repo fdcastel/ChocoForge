@@ -1,10 +1,10 @@
 function Sync-ForgePackage {
     <#
     .SYNOPSIS
-        Builds and publishes missing Chocolatey packages for all targets defined in a ChocoForge YAML configuration.
+        Builds and publishes missing Chocolatey packages for all sources defined in a ChocoForge YAML configuration.
 
     .DESCRIPTION
-        Reads and resolves a ChocoForge YAML configuration file using Read-ForgeConfiguration and Resolve-ForgeConfiguration. For each target, builds and publishes any missing package versions, skipping targets with a skipReason. Provides verbose output for all major steps and displays a summary of published and skipped targets. Throws on unexpected errors or if no packages are built when expected.
+        Reads and resolves a ChocoForge YAML configuration file using Read-ForgeConfiguration and Resolve-ForgeConfiguration. For each source, builds and publishes any missing package versions, skipping sources with a skipReason. Provides verbose output for all major steps and displays a summary of published and skipped sources. Throws on unexpected errors or if no packages are built when expected.
 
     .PARAMETER Path
         Path to the YAML configuration file. If not provided, auto-discovery is handled by Read-ForgeConfiguration.
@@ -13,7 +13,7 @@ function Sync-ForgePackage {
         Sync-ForgePackage -Path 'Samples/firebird.forge.yaml'
 
     .NOTES
-        - Displays a summary of published and skipped targets.
+        - Displays a summary of published and skipped sources.
         - Throws on unexpected errors or if no packages are built.
     #>
     [CmdletBinding(SupportsShouldProcess)]
@@ -23,12 +23,12 @@ function Sync-ForgePackage {
     )
     $config = Read-ForgeConfiguration -Path $Path | Resolve-ForgeConfiguration
 
-    $skippedTargets = $config.targets.Keys | Where-Object { $config.targets[$_].skipReason }
-    Write-VerboseMark "Skipped targets: $($skippedTargets -join ', ')"
+    $skippedSources = $config.sources.Keys | Where-Object { $config.sources[$_].skipReason }
+    Write-VerboseMark "Skipped sources: $($skippedSources -join ', ')"
 
-    $allVersionsToPublish = $config.targets.Keys |
-        Where-Object { -not $config.targets[$_].skipReason } |
-            ForEach-Object { $config.targets[$_].missingVersions } |
+    $allVersionsToPublish = $config.sources.Keys |
+        Where-Object { -not $config.sources[$_].skipReason } |
+            ForEach-Object { $config.sources[$_].missingVersions } |
                 Select-Object -Unique
 
     $packagesBuilt = @()
@@ -47,24 +47,24 @@ function Sync-ForgePackage {
         }
         Write-VerboseMark "Packages built: $($packagesBuilt.Count)"
 
-        foreach ($targetName in $config.targets.Keys) {
-            $target = $config.targets[$targetName]
+        foreach ($sourceName in $config.sources.Keys) {
+            $source = $config.sources[$sourceName]
             
-            if ($target.skipReason) {
-                Write-VerboseMark "Skipping target '$($targetName)'. Reason: $($target.skipReason)"
+            if ($source.skipReason) {
+                Write-VerboseMark "Skipping source '$($sourceName)'. Reason: $($source.skipReason)"
                 continue
             }
 
-            Write-VerboseMark "Publishing packages for target: $($targetName)"
+            Write-VerboseMark "Publishing packages for source: $($sourceName)"
 
-            foreach ($version in $target.missingVersions) {
+            foreach ($version in $source.missingVersions) {
                 $packageBuilt = $packagesBuilt | Where-Object { $_ -like "*.$($version).nupkg" }
                 if (-not $packageBuilt) {
                     throw "Unexpected: No built package found for version $($version)."
                 }
 
-                Write-VerboseMark "Publishing '$($packageBuilt)' to '$($targetName)'..."
-                $packagePublished = Publish-ChocolateyPackage -Path $packageBuilt -TargetUrl $target.url -ApiKey $target.resolvedApiKey
+                Write-VerboseMark "Publishing '$($packageBuilt)' to '$($sourceName)'..."
+                $packagePublished = Publish-ChocolateyPackage -Path $packageBuilt -SourceUrl $source.url -ApiKey $source.resolvedApiKey
                 $packagesPublished += $packagePublished
             }
         }
@@ -74,7 +74,7 @@ function Sync-ForgePackage {
     
     # Display operation summary
     Write-Host ''
-    $statusColor = if ($skippedTargets) { 'Yellow' } else { 'Green' }
+    $statusColor = if ($skippedSources) { 'Yellow' } else { 'Green' }
     if ($allVersionsToPublish) {
         Write-Host 'Published ' -ForegroundColor $statusColor -NoNewline
         Write-Host $packagesPublished.Count -ForegroundColor Magenta -NoNewline
@@ -82,8 +82,8 @@ function Sync-ForgePackage {
     } else {
         Write-Host 'No versions to publish.' -ForegroundColor $statusColor
     }
-    if ($skippedTargets) {
-        Write-Host '  - Skipped targets: ' -NoNewline
-        Write-Host "$($skippedTargets -join ', ')" -ForegroundColor Cyan
+    if ($skippedSources) {
+        Write-Host '  - Skipped sources: ' -NoNewline
+        Write-Host "$($skippedSources -join ', ')" -ForegroundColor Cyan
     }
 }

@@ -14,7 +14,7 @@ function Read-ForgeConfiguration {
         - 'package'
         - 'releases.source' (must be a GitHub URL)
         - At least one 'releases.flavors' entry (each must have 'versionPattern' and 'assetsPattern')
-        - At least one 'targets' entry (each must have 'url' and 'apiKey')
+        - At least one 'sources' entry (each must have 'url' and 'apiKey')
 
     .PARAMETER Path
         Path to the YAML configuration file. If not provided, the function will search for a single .forge.yaml file in the current directory.
@@ -89,17 +89,17 @@ function Read-ForgeConfiguration {
         }
     }
 
-    # Validate 'targets' (at least one, each with url and apiKey)
-    if (-not $config.targets -or $config.targets.Count -eq 0) {
-        throw "At least one 'targets' entry is required."
+    # Validate 'sources' (at least one, each with url and apiKey)
+    if (-not $config.sources -or $config.sources.Count -eq 0) {
+        throw "At least one 'sources' entry is required."
     }
-    foreach ($targetName in $config.targets.Keys) {
-        $target = $config.targets[$targetName]
-        if (-not $target.url) {
-            throw "Target '$targetName' is missing 'url'."
+    foreach ($sourceName in $config.sources.Keys) {
+        $source = $config.sources[$sourceName]
+        if (-not $source.url) {
+            throw "Source '$sourceName' is missing 'url'."
         }
-        if (-not $target.apiKey) {
-            throw "Target '$targetName' is missing 'apiKey'."
+        if (-not $source.apiKey) {
+            throw "Source '$sourceName' is missing 'apiKey'."
         }
     }
 

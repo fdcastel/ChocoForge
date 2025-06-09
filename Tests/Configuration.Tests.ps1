@@ -35,10 +35,10 @@ Describe 'Configuration' {
             $config.package | Should -Be 'firebird'
             $config.releases.source | Should -Match '^https://github.com/FirebirdSQL/firebird'
             $config.releases.flavors.Keys | Should -Contain 'current'
-            $config.targets.Keys | Should -Contain 'community'
+            $config.sources.Keys | Should -Contain 'community'
         }
 
-        It 'Enriches the firebird configuration with assets and targets' {
+        It 'Enriches the firebird configuration with assets and sources' {
             $configPath = "$PSScriptRoot/assets/firebird-package/firebird.forge.yaml"
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
 
@@ -46,18 +46,18 @@ Describe 'Configuration' {
             $config.versions | Should -HaveCount 12  # Minimum version should filter out 3.0.8 and 3.0.9
             $config.versions | Where-Object { $_.flavor -eq 'v4' } | Should -HaveCount 6
 
-            $config.targets | Should -Not -BeNullOrEmpty
-            $config.targets.Keys | Should -HaveCount 3
+            $config.sources | Should -Not -BeNullOrEmpty
+            $config.sources.Keys | Should -HaveCount 3
 
             $expectedCommunityVersions = Get-Content "$PSScriptRoot/assets/chocolatey-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
-            $config.targets.community.publishedVersions | Should -Be $expectedCommunityVersions
-            $config.targets.community.missingVersions | Should -HaveCount 6
+            $config.sources.community.publishedVersions | Should -Be $expectedCommunityVersions
+            $config.sources.community.missingVersions | Should -HaveCount 6
 
             $expectedGitHubVersions = Get-Content "$PSScriptRoot/assets/github-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
-            $config.targets.github.publishedVersions | Should -Be $expectedGitHubVersions
-            $config.targets.github.missingVersions | Should -HaveCount 7
+            $config.sources.github.publishedVersions | Should -Be $expectedGitHubVersions
+            $config.sources.github.missingVersions | Should -HaveCount 7
         }
 
         It 'Builds a Chocolatey package from a nuspec and context' {

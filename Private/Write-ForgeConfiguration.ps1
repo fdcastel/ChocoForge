@@ -4,7 +4,7 @@ function Write-ForgeConfiguration {
         Writes a summary of the Forge configuration object to the host, with colorized output for easy reading.
 
     .DESCRIPTION
-        Displays key information about the resolved Forge configuration, including package name, targets, publishing status, flavors, and version details. 
+        Displays key information about the resolved Forge configuration, including package name, sources, publishing status, flavors, and version details. 
         
     .PARAMETER Configuration
         The resolved configuration object (output of Resolve-ForgeConfiguration) to display.
@@ -29,20 +29,20 @@ function Write-ForgeConfiguration {
         Write-Host $Configuration.package -ForegroundColor Cyan
         Write-Host ''
 
-        Write-Host 'Targets:' -ForegroundColor Gray
-        $targets = $Configuration.targets
-        $targetNames = $targets.Keys
+        Write-Host 'Sources:' -ForegroundColor Gray
+        $sources = $Configuration.sources
+        $sourceNames = $sources.Keys
 
-        foreach ($targetName in $targetNames) {
-            $target = $targets[$targetName]
+        foreach ($sourceName in $sourceNames) {
+            $source = $sources[$sourceName]
 
             Write-Host '  - ' -ForegroundColor Gray -NoNewline
-            Write-Host "$targetName" -ForegroundColor Cyan -NoNewline
+            Write-Host "$sourceName" -ForegroundColor Cyan -NoNewline
             Write-Host ': ' -ForegroundColor Gray -NoNewline
             
-            if ($target.missingVersions) {
-                if ($Configuration.versions.Count -eq $target.missingVersions.Count) {
-                    Write-Host 'Not published on this target' -ForegroundColor DarkGray -NoNewline
+            if ($source.missingVersions) {
+                if ($Configuration.versions.Count -eq $source.missingVersions.Count) {
+                    Write-Host 'Not published on this source' -ForegroundColor DarkGray -NoNewline
                 } else {
                     Write-Host 'Some missing versions' -ForegroundColor Yellow -NoNewline
                 }
@@ -51,18 +51,18 @@ function Write-ForgeConfiguration {
             }
             Write-Host ''
 
-            if ($target.skipReason) {
+            if ($source.skipReason) {
                 Write-Host '    - ' -ForegroundColor Gray -NoNewline
-                Write-Host "$($target.skipReason)" -ForegroundColor Yellow -NoNewline
-                if ($target.missingVersions) {
+                Write-Host "$($source.skipReason)" -ForegroundColor Yellow -NoNewline
+                if ($source.missingVersions) {
                     Write-Host ' (cannot publish)' -ForegroundColor DarkRed -NoNewline
                 }
                 Write-Host ''
             }
 
-            if ($target.warningMessage) {
+            if ($source.warningMessage) {
                 Write-Host '    - ' -ForegroundColor Gray -NoNewline
-                Write-Host "$($target.warningMessage)" -ForegroundColor DarkYellow
+                Write-Host "$($source.warningMessage)" -ForegroundColor DarkYellow
             }
         }
 
@@ -79,30 +79,30 @@ function Write-ForgeConfiguration {
             $flavorVersions = $configuration.versions | Where-Object { $_.flavor -eq $flavorName }
             $flavorLatestVersion = $flavorVersions.version | Select-Object -First 1
 
-            foreach ($targetName in $targetNames) {
-                $target = $targets[$targetName]
+            foreach ($sourceName in $sourceNames) {
+                $source = $sources[$sourceName]
 
                 Write-Host '    - ' -ForegroundColor Gray -NoNewline
-                Write-Host "$targetName" -ForegroundColor Cyan -NoNewline
+                Write-Host "$sourceName" -ForegroundColor Cyan -NoNewline
                 Write-Host ': ' -ForegroundColor Gray -NoNewline
 
-                $flavorTargetVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($target.publishedVersions -contains $_.version) }
-                $flavorTargetMissingVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($target.publishedVersions -notcontains $_.version) }
-                $flavorTargetLatestVersion = $flavorTargetVersions.version | Select-Object -First 1
+                $flavorSourceVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($source.publishedVersions -contains $_.version) }
+                $flavorSourceMissingVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($source.publishedVersions -notcontains $_.version) }
+                $flavorSourceLatestVersion = $flavorSourceVersions.version | Select-Object -First 1
 
-                if ($flavorTargetLatestVersion) {
-                    if ($flavorTargetLatestVersion -eq $flavorLatestVersion) {
-                        Write-Host "$flavorTargetLatestVersion (up-to-date)" -ForegroundColor Green
+                if ($flavorSourceLatestVersion) {
+                    if ($flavorSourceLatestVersion -eq $flavorLatestVersion) {
+                        Write-Host "$flavorSourceLatestVersion (up-to-date)" -ForegroundColor Green
                     } else {
-                        Write-Host "$flavorTargetLatestVersion (out-of-date)" -ForegroundColor Yellow
+                        Write-Host "$flavorSourceLatestVersion (out-of-date)" -ForegroundColor Yellow
                     }
                 } else {
-                    Write-Host 'Not published on this target' -ForegroundColor DarkGray
+                    Write-Host 'Not published on this source' -ForegroundColor DarkGray
                 }
 
-                if ($flavorTargetMissingVersions) {
+                if ($flavorSourceMissingVersions) {
                     Write-Host '      - Missing versions: ' -NoNewline -ForegroundColor Gray
-                    Write-Host ($flavorTargetMissingVersions.version -join ', ') -ForegroundColor Magenta
+                    Write-Host ($flavorSourceMissingVersions.version -join ', ') -ForegroundColor Magenta
                 }
             }
             Write-Host ''

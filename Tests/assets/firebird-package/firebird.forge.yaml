@@ -15,8 +15,8 @@ releases:
       - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
       - minimumVersion: 3.0.10 # Minimum version to consider for updates. Optional, but recommended.
 
-targets:
-  # At least one target must be defined.
+sources:
+  # At least one source must be defined.
   community:
     url: https://community.chocolatey.org/api/v2 # Required
     apiKey: ${CHOCOLATEY_API_KEY} # Required

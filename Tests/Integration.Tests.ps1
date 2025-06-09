@@ -16,12 +16,12 @@ Describe 'Integration' {
             $versionsToTest = @('5.0.1', '3.0.10')
 
             $nuspecPath = "$PSScriptRoot/assets/firebird-package/firebird.nuspec"
-            $target = $config.targets.github
+            $source = $config.sources.github
 
             $packagesPushed = $config.versions |
                 Where-Object { $_.version -in $versionsToTest } |
                     Build-ChocolateyPackage -NuspecPath $nuspecPath |
-                        Publish-ChocolateyPackage -TargetUrl $target.url -ApiKey $env:GITHUB_API_KEY -Force
+                        Publish-ChocolateyPackage -SourceUrl $source.url -ApiKey $env:GITHUB_API_KEY -Force
 
             $packagesPushed | Should -HaveCount 2
         }
