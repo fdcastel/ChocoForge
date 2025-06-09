@@ -23,7 +23,7 @@ Describe 'Integration' {
                     Build-ChocolateyPackage -NuspecPath $nuspecPath |
                         Publish-ChocolateyPackage -TargetUrl $target.url -ApiKey $env:GITHUB_API_KEY -Force
 
-            @($packagesPushed).Count | Should -Be 2
+            $packagesPushed | Should -HaveCount 2
         }
     }
 }

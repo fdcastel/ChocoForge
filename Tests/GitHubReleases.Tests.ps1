@@ -17,7 +17,7 @@ Describe 'GitHubReleases' {
             $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
             $filter = @{ tag_name = @{ op = 'match'; value = '^R3' } }
             $filtered = Select-ObjectLike -InputObject $releases -Filter $filter
-            $filtered.Count | Should -Be 6
+            $filtered | Should -HaveCount 6
         }
 
         It 'Expands and filters Firebird v5+ releases by version' {
@@ -54,8 +54,8 @@ Describe 'GitHubReleases' {
             $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern -TransposeProperty 'arch'
 
             $expanded | Should -Not -BeNullOrEmpty
-            $expanded.assets.x64.Length | Should -Be 3
-            $expanded.assets.x86.Length | Should -Be 3
+            $expanded.assets.x64 | Should -HaveCount 3
+            $expanded.assets.x86 | Should -HaveCount 3
 
             foreach ($r in $expanded) {
                 $r.assets.Keys | Should -Not -BeNullOrEmpty

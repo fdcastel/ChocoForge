@@ -43,21 +43,21 @@ Describe 'Configuration' {
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
 
             $config.versions | Should -Not -BeNullOrEmpty
-            $config.versions.Length | Should -Be 12  # Minimum version should filter out 3.0.8 and 3.0.9
+            $config.versions | Should -HaveCount 12  # Minimum version should filter out 3.0.8 and 3.0.9
             $config.versions | Where-Object { $_.flavor -eq 'v4' } | Should -HaveCount 6
 
             $config.targets | Should -Not -BeNullOrEmpty
-            $config.targets.Keys.Count | Should -Be 3
+            $config.targets.Keys | Should -HaveCount 3
 
             $expectedCommunityVersions = Get-Content "$PSScriptRoot/assets/chocolatey-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
             $config.targets.community.publishedVersions | Should -Be $expectedCommunityVersions
-            $config.targets.community.missingVersions.Length | Should -Be 6
+            $config.targets.community.missingVersions | Should -HaveCount 6
 
             $expectedGitHubVersions = Get-Content "$PSScriptRoot/assets/github-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
             $config.targets.github.publishedVersions | Should -Be $expectedGitHubVersions
-            $config.targets.github.missingVersions.Length | Should -Be 7
+            $config.targets.github.missingVersions | Should -HaveCount 7
         }
 
         It 'Builds a Chocolatey package from a nuspec and context' {
@@ -87,7 +87,7 @@ Describe 'Configuration' {
                             return $_
                         }
 
-            $packagesBuilt.Count | Should -Be 2
+            $packagesBuilt | Should -HaveCount 2
 
             Get-Content "$env:TEMP/chocoforge/firebird/5.0.1/_extracted/tools/chocolateyInstall.ps1" | Select-Object -Skip 9 -First 1 | Should -Match "checksum64 = 'dba458a95de9c3a3b297d98601a10dcda95b63bfaee6f72ec4931d6c740bccde'"
             Get-Content "$env:TEMP/chocoforge/firebird/3.0.10/_extracted/tools/chocolateyInstall.ps1" | Select-Object -Skip 10 -First 1 | Should -Match "checksum32 = 'd4c220bbad1eac9d7578979582a2142ae31778126d300cfcd2b91399238fdaf6'"

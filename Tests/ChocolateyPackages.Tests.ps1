@@ -12,7 +12,7 @@ Describe 'ChocolateyPackages' {
             }
             $result = Find-ChocolateyPublishedVersions -PackageName 'firebird'
             $result | Should -Not -BeNullOrEmpty
-            $result.Count | Should -Be 7
+            $result | Should -HaveCount 7
             $result | Should -Contain ([version]'5.0.2')
             $result | Should -Contain ([version]'3.0.10.1000')
             $result | Should -Not -Contain ([version]'3.0.10')
