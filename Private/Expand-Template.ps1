@@ -8,8 +8,12 @@
         
         If a context value is missing, the placeholder is replaced with an empty string.
 
-        For placeholders ending in '.sha256' (e.g., {{ asset.sha256 }}), if the parent object contains a 'browser_download_url' 
-        property, the function will automatically download the file, calculate its SHA256 hash, and cache the result for 24 hours. 
+        For placeholders ending in '.sha256' (e.g., {{ asset.sha256 }}):
+        
+        - if the parent object contains a 'browser_download_url' property, the function will automatically download the file,
+          calculate its SHA256 hash, and cache the result for 24 hours. 
+
+        - if the parent object contains a 'digest' property starting with 'sha256:', it will extract the SHA256 value from there.
 
         Returns the expanded string with all placeholders replaced.
 
@@ -48,6 +52,13 @@ function Expand-Template {
                     if ($null -eq $parentVal) { break }
                     $parentVal = $parentVal.$pp
                 }
+
+                if ($null -ne $parentVal -and $null -ne $parentVal.digest -and $parentVal.digest.StartsWith('sha256:')) {
+                    $sha256 = $parentVal.digest.Substring(7)
+                    Write-VerboseMark "Using sha256 from digest property: $sha256"
+                    return $sha256
+                }
+
                 if ($null -ne $parentVal -and $null -ne $parentVal.browser_download_url -and $parentVal.browser_download_url -ne '') {
                     return Get-Sha256FromUrlWithCache -Url $parentVal.browser_download_url
                 }
