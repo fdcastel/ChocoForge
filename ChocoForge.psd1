@@ -19,6 +19,11 @@
     # Description of the functionality provided by this module
     Description       = 'PowerShell toolkit for automating the creation, management, and publishing of Chocolatey packages.'
 
+    FunctionsToExport = @(
+        'Get-ForgePackage',
+        'Sync-ForgePackage'
+    )
+
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '7.4'
 
