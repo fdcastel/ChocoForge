@@ -103,6 +103,11 @@ function Resolve-GitHubReleases {
                         # If the asset does not match, it is excluded
                     }
                     $release.assets = $filteredAssets
+
+                    if ($filteredAssets.Count -eq 0) {
+                        Write-Warning "Release '$($release.tag_name)' has no assets matching the pattern '$AssetPattern' (AssetPattern too strict?)"
+                        continue
+                    }
                 }
                 $result += $release
             }
