@@ -12,18 +12,18 @@ $checksum32 = '{{assets.x86.sha256}}{{assets.Win32.sha256}}'
 $checksumType = 'sha256'
 
 $packageArgs = @{
-  packageName   = $packageName
-  unzipLocation = $toolsDir
-  fileType      = 'EXE'
-  url           = $url32
-  url64bit      = $url64
-  silentArgs    = '/SP- /VERYSILENT /NORESTART /NOICONS /SUPPRESSMSGBOXES'
-  validExitCodes= @(0)
-  softwareName  = 'Firebird*'
-  checksum      = $checksum32
-  checksumType  = $checksumType
-  checksum64    = $checksum64
-  checksumType64= $checksumType
+    packageName    = $packageName
+    unzipLocation  = $toolsDir
+    fileType       = 'EXE'
+    url            = $url32
+    url64bit       = $url64
+    silentArgs     = '/SP- /VERYSILENT /NORESTART /NOICONS /SUPPRESSMSGBOXES'
+    validExitCodes = @(0)
+    softwareName   = 'Firebird*'
+    checksum       = $checksum32
+    checksumType   = $checksumType
+    checksum64     = $checksum64
+    checksumType64 = $checksumType
 }
 
 function Get-FirebirdPath {
@@ -40,7 +40,7 @@ function Get-FirebirdPath {
         Write-Host "Firebird installation path: $($instances.DefaultInstance)"
         $instances.DefaultInstance
     } else {
-        Write-Host "Firebird is NOT installed."
+        Write-Host 'Firebird is NOT installed.'
         $null
     }
 }
@@ -50,7 +50,7 @@ function Uninstall-Firebird {
 
     if ($firebirdPath) {
         if (Get-Service -Name FirebirdServerDefaultInstance -ErrorAction SilentlyContinue) {
-            Write-Host "Stopping Firebird service..."
+            Write-Host 'Stopping Firebird service...'
             Stop-Service -Name FirebirdServerDefaultInstance -Force
         }
 
@@ -61,7 +61,7 @@ function Uninstall-Firebird {
             $uninstallerArgs = '/VERYSILENT', '/NORESTART', '/SUPPRESSMSGBOXES'
             Write-Host "Calling uninstaller: $($lastUninstaller.FullName)"
             Uninstall-ChocolateyPackage -PackageName $packageName -FileType 'EXE' `
-                                        -SilentArgs $uninstallerArgs -File $lastUninstaller.FullName
+                -SilentArgs $uninstallerArgs -File $lastUninstaller.FullName
         }
     }
 }
