@@ -4,7 +4,7 @@ Describe 'Configuration' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
             Mock Invoke-RestMethod {
-                Get-Content "$PSScriptRoot/assets/github-releases.json" -Raw | ConvertFrom-Json
+                Get-Content "$PSScriptRoot/assets/firebird-mocks/github-releases.json" -Raw | ConvertFrom-Json
             }
             Mock Invoke-Chocolatey {
                 if ($PesterBoundParameters.Arguments[0] -eq 'search') {
@@ -16,7 +16,7 @@ Describe 'Configuration' {
                     }
                     [PSCustomObject]@{
                         ExitCode = 0
-                        StdOut   = Get-Content "$PSScriptRoot/assets/$mockFile" -Raw
+                        StdOut   = Get-Content "$PSScriptRoot/assets/firebird-mocks/$mockFile" -Raw
                         StdErr   = ''
                     }
                 } else {
@@ -49,18 +49,18 @@ Describe 'Configuration' {
             $config.sources | Should -Not -BeNullOrEmpty
             $config.sources.Keys | Should -HaveCount 3
 
-            $expectedCommunityVersions = Get-Content "$PSScriptRoot/assets/chocolatey-packages.txt" |
+            $expectedCommunityVersions = Get-Content "$PSScriptRoot/assets/firebird-mocks/chocolatey-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
             $config.sources.community.publishedVersions | Should -Be $expectedCommunityVersions
             $config.sources.community.missingVersions | Should -HaveCount 6
 
-            $expectedGitHubVersions = Get-Content "$PSScriptRoot/assets/github-packages.txt" |
+            $expectedGitHubVersions = Get-Content "$PSScriptRoot/assets/firebird-mocks/github-packages.txt" |
                 ForEach-Object { [version]($_.Split('|')[1]) }
             $config.sources.github.publishedVersions | Should -Be $expectedGitHubVersions
             $config.sources.github.missingVersions | Should -HaveCount 7
         }
 
-        It 'Builds a Chocolatey package from a nuspec and context' {
+        It 'Builds a Chocolatey package with multiple architectures (firebird)' {
             $configPath = "$PSScriptRoot/assets/firebird-package/firebird.forge.yaml"
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
 

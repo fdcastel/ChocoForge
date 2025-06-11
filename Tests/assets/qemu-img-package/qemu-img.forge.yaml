@@ -1,0 +1,21 @@
+package: qemu-img
+
+releases:
+  source: https://github.com/fdcastel/qemu-img-windows-x64  # For now it musts be a GitHub repository. Required
+  flavors:
+    # At least one flavor must be defined.
+    current:
+      - versionPattern: 'v(\d+\.\d+\.\d+)$' # Must be a valid Regex. Required
+      - assetsPattern: '.zip$' # Must be a valid Regex. May have a maximum of one capture group. Required.
+
+sources:
+  community:
+    url: https://community.chocolatey.org/api/v2
+    apiKey: ${CHOCOLATEY_API_KEY}
+  github:
+    url: https://nuget.pkg.github.com/fdcastel/index.json
+    apiKey: ${GITHUB_API_KEY}
+  gitlab:
+    url: https://gitlab.com/api/v4/projects/70655681/packages/nuget/index.json
+    username: fdcastel
+    apiKey: ${GITLAB_API_KEY}
