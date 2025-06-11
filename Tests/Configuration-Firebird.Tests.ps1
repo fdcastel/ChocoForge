@@ -1,11 +1,16 @@
 Import-Module "$PSScriptRoot/../ChocoForge.psd1" -Force
 
-Describe 'Configuration' {
+Describe 'Configuration-Firebird' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
+            Mock Expand-EnvironmentVariables {
+                'fake-api-key'
+            }
+
             Mock Invoke-RestMethod {
                 Get-Content "$PSScriptRoot/assets/firebird-mocks/github-releases.json" -Raw | ConvertFrom-Json
             }
+
             Mock Invoke-Chocolatey {
                 if ($PesterBoundParameters.Arguments[0] -eq 'search') {
                     # mock choco search

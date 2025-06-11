@@ -6,7 +6,7 @@ Describe 'ChocolateyPackages' {
             Mock Invoke-Chocolatey {
                 [PSCustomObject]@{
                     ExitCode = 0
-                    StdOut   = Get-Content "$PSScriptRoot/assets/chocolatey-packages.txt" -Raw
+                    StdOut   = Get-Content "$PSScriptRoot/assets/firebird-mocks/chocolatey-packages.txt" -Raw
                     StdErr   = ''
                 }
             }

@@ -4,7 +4,7 @@ Describe 'GitHubReleases' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
             Mock Invoke-RestMethod {
-                Get-Content "$PSScriptRoot/assets/github-releases.json" -Raw | ConvertFrom-Json
+                Get-Content "$PSScriptRoot/assets/firebird-mocks/github-releases.json" -Raw | ConvertFrom-Json
             }
         }
 
@@ -22,9 +22,9 @@ Describe 'GitHubReleases' {
 
         It 'Expands and filters Firebird v5+ releases by version' {
             $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
-            $versionPattern = 'v(5\.[\d.]+)'
+            $versionPattern = 'v(5\.\d+\.\d+)$'
             $assetsPattern = 'Firebird-[\d.]+-\d+-(?<platform>[^-]+)-(?<arch>[^-.]+)(-(?<debug>withDebugSymbols))?\.(?<ext>.+)$'
-            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern
 
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
@@ -35,9 +35,9 @@ Describe 'GitHubReleases' {
 
         It 'Expands and filters Firebird v3/v4 releases by version' {
             $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
-            $versionPattern = 'v([3-4]\.[\d.]+)'
-            $assetsPattern = 'Firebird-[\d.]+-\d+-(?<arch>[^-.]+)(-(?<debug>pdb))?\.exe$'
-            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern #-MinimumVersion '5.0.0' 
+            $versionPattern = 'v([3-4]\.\d+\.\d+)$'
+            $assetsPattern = 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern
 
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
