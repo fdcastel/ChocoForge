@@ -81,8 +81,14 @@ function Resolve-GitHubReleases {
 
             # If a version is extracted, add it as a property
             if ($null -ne $version) {
-                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue ([semver]$version) -Force
-            } 
+                $semVersion = [semver]$version
+                # If MinimumVersion is provided, filter releases by version
+                if ($MinimumVersion -and ($semVersion -lt $MinimumVersion)) {
+                    continue
+                }
+
+                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue $semVersion -Force
+            }
 
             if ($matched) {                
                 # Asset attribute extraction using named capture groups
@@ -111,11 +117,6 @@ function Resolve-GitHubReleases {
                 }
                 $result += $release
             }
-        }
-
-        # If MinimumVersion is provided, filter releases by version
-        if ($MinimumVersion) {
-            $result = $result | Where-Object { $_.version -ge $MinimumVersion }
         }
 
         # If TransposeProperty is provided, group assets by the specified property
