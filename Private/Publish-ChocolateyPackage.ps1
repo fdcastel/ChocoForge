@@ -56,6 +56,11 @@ function Publish-ChocolateyPackage {
             throw "Package file not found: $Path"
         }
 
+        if ($SourceUrl.StartsWith('https://community.chocolatey.org')) {
+            # Chocolatey community repository uses different push url.
+            $SourceUrl = 'https://push.chocolatey.org'
+        }
+
         $chocoArguments = @(
             'push', $Path, '--source', $SourceUrl, '--limit-output'
         )
