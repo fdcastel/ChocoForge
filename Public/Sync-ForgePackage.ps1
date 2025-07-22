@@ -63,6 +63,28 @@ function Sync-ForgePackage {
                     throw "Unexpected: No built package found for version $($version)."
                 }
 
+                if ($source.url.StartsWith('https://community.chocolatey.org')) {
+                    # Chocolatey community repository: Do not resubmit packages during moderation.
+
+                    # Packages in moderation do not appear in search results. But a `choco search` will return it if the specific version is passed.
+                    #   https://github.com/chocolatey/choco/discussions/3763
+                    $packageName = $config.package
+                    $chocoArguments = @('search', $packageName, '--exact', '--ignore-http-cache', '--limit-output', '--version', $version)
+
+                    Write-VerboseMark -Message "Searching for specific version '$version' of package '$packageName' in Chocolatey community repository."
+                    $result = Invoke-Chocolatey -Arguments $chocoArguments
+                    if ($result.ExitCode -ne 0) {
+                        throw "choco search failed: $($result.StdOut)"
+                    }
+
+                    if ($result.StdOut) {
+                        Write-VerboseMark "Found package '$packageName' version '$version' in Chocolatey community repository. Skipping publish."
+                        continue
+                    } else {
+                        Write-VerboseMark "No existing package found for version '$version'. Proceeding to publish."
+                    }
+                }
+
                 Write-VerboseMark "Publishing '$($packageBuilt)' to '$($sourceName)'..."
                 $packagePublished = Publish-ChocolateyPackage -Path $packageBuilt -SourceUrl $source.url -ApiKey $source.resolvedApiKey
                 $packagesPublished += $packagePublished
