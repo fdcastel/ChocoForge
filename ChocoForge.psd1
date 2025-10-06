@@ -20,6 +20,7 @@
     Description       = 'PowerShell toolkit for automating the creation, management, and publishing of Chocolatey packages.'
 
     FunctionsToExport = @(
+        'Build-ForgePackage',
         'Get-ForgePackage',
         'Sync-ForgePackage'
     )
