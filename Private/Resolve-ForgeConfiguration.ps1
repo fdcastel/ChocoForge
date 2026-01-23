@@ -118,8 +118,33 @@ function Resolve-ForgeConfiguration {
         $source.publishedVersions = Find-ChocolateyPublishedVersions @findArguments
 
         # Find missing versions: those in allVersions but not in publishedVersions.
-        $pubVersions = $source.publishedVersions | ForEach-Object { [version]::new($_.Major, $_.Minor, $_.Build, $_.Revision) }
-        $source.missingVersions = $allVersions.version | Where-Object { $pubVersions -notcontains $_ }
+        #   When comparing versions, treat Revision=-1 as a wildcard that matches any Revision value.
+        $source.missingVersions = $allVersions.version | Where-Object {
+            $releaseVersion = [version]$_
+            $isPublished = $false
+            
+            foreach ($pubVersion in $source.publishedVersions) {
+                # Compare Major, Minor, Build
+                if ($pubVersion.Major -eq $releaseVersion.Major -and 
+                    $pubVersion.Minor -eq $releaseVersion.Minor -and 
+                    $pubVersion.Build -eq $releaseVersion.Build) {
+                    
+                    # If either has Revision=-1, treat it as a wildcard match
+                    if ($pubVersion.Revision -eq -1 -or $releaseVersion.Revision -eq -1) {
+                        $isPublished = $true
+                        break
+                    }
+                    
+                    # Both have explicit Revision values, must match exactly
+                    if ($pubVersion.Revision -eq $releaseVersion.Revision) {
+                        $isPublished = $true
+                        break
+                    }
+                }
+            }
+            
+            -not $isPublished
+        }
 
         Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($source.publishedVersions.Count) published versions, $($source.missingVersions.Count) missing versions."
 
