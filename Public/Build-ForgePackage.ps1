@@ -34,7 +34,7 @@ function Build-ForgePackage {
         [string]$Path = '.',
 
         [Parameter(Mandatory = $true)]
-        [semver[]]$Version,
+        [version[]]$Version,
 
         [Parameter(Mandatory = $false)]
         [int]$RevisionNumber = 0

@@ -219,7 +219,7 @@ sources:
 sources:
   community:
     url: https://community.chocolatey.org/api/v2
-    apiKey: ${CHOCOLATEY_API_KEY}
+    apiKey: ${APIKEY_CHOCOLATEY}
 ```
 
 ChocoForge will resolve `${ENV_VAR_NAME}` patterns by reading from environment variables.
@@ -235,7 +235,7 @@ sources:
   gitlab:
     url: https://gitlab.com/api/v4/projects/70655681/packages/nuget/index.json
     username: your-username
-    apiKey: ${GITLAB_API_KEY}
+    apiKey: ${APIKEY_GITLAB}
 ```
 
 **Note:** GitHub sources automatically extract the username from the URL and don't require this field.
@@ -262,14 +262,14 @@ releases:
 sources:
   community:
     url: https://community.chocolatey.org/api/v2
-    apiKey: ${CHOCOLATEY_API_KEY}
+    apiKey: ${APIKEY_CHOCOLATEY}
   github:
     url: https://nuget.pkg.github.com/fdcastel/index.json
-    apiKey: ${GITHUB_API_KEY}
+    apiKey: ${APIKEY_GITHUB}
   gitlab:
     url: https://gitlab.com/api/v4/projects/70655681/packages/nuget/index.json
     username: fdcastel
-    apiKey: ${GITLAB_API_KEY}
+    apiKey: ${APIKEY_GITLAB}
 ```
 
 ---
@@ -443,7 +443,7 @@ Builds one or more Chocolatey packages for specific versions without publishing 
 #### Syntax
 
 ```powershell
-Build-ForgePackage [[-Path] <String>] -Version <semver[]> [-RevisionNumber <int>] [-WhatIf] [-Verbose]
+Build-ForgePackage [[-Path] <String>] -Version <version[]> [-RevisionNumber <int>] [-WhatIf] [-Verbose]
 ```
 
 #### Parameters
@@ -546,11 +546,11 @@ Sync-ForgePackage -Path 'C:\packages\myapp\myapp.forge.yaml'
 
 **GitHub Packages:**
 - Automatically uses username from the repository URL
-- Requires `${GITHUB_API_KEY}` environment variable
+- Requires `${APIKEY_GITHUB}` environment variable
 
 **GitLab Package Registry:**
 - Requires `username` in the configuration
-- Requires `${GITLAB_API_KEY}` environment variable
+- Requires `${APIKEY_GITLAB}` environment variable
 
 #### Output
 
@@ -576,7 +576,7 @@ Published 3 new packages.
 1. **Never store API keys in `.forge.yaml`**
    ```yaml
    # ✅ Good
-   apiKey: ${CHOCOLATEY_API_KEY}
+   apiKey: ${APIKEY_CHOCOLATEY}
    
    # ❌ Bad
    apiKey: abc123-your-actual-key-456def
@@ -584,9 +584,9 @@ Published 3 new packages.
 
 2. **Set environment variables** in your profile or CI/CD:
    ```powershell
-   $env:CHOCOLATEY_API_KEY = 'your-key-here'
-   $env:GITHUB_API_KEY = 'your-token-here'
-   $env:GITLAB_API_KEY = 'your-token-here'
+   $env:APIKEY_CHOCOLATEY = 'your-key-here'
+   $env:APIKEY_GITHUB = 'your-token-here'
+   $env:APIKEY_GITLAB = 'your-token-here'
    ```
 
 3. **Add `.forge.yaml` to `.gitignore` if it contains sensitive data** (though using environment variables avoids this)
@@ -649,7 +649,7 @@ Published 3 new packages.
          - name: Sync packages
            run: Sync-ForgePackage -Verbose
            env:
-             CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+             APIKEY_CHOCOLATEY: ${{ secrets.APIKEY_CHOCOLATEY }}
    ```
 
 2. **Use `-Verbose`** in automation for better logging
@@ -681,7 +681,7 @@ For real-world production examples, see the [chocolatey-packages](https://github
 
 Set the required environment variable:
 ```powershell
-$env:CHOCOLATEY_API_KEY = 'your-key'
+$env:APIKEY_CHOCOLATEY = 'your-key'
 ```
 
 ### "Version X is not available in the configuration"

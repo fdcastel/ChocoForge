@@ -52,7 +52,7 @@ function Resolve-GitHubReleases {
 
         [Parameter(ParameterSetName = 'VersionPattern')]
         [Parameter(ParameterSetName = 'VersionScriptBlock')]
-        [semver]$MinimumVersion,
+        [version]$MinimumVersion,
 
         [Parameter(ParameterSetName = 'NoVersion')]
         [Parameter(ParameterSetName = 'VersionPattern')]
@@ -81,13 +81,13 @@ function Resolve-GitHubReleases {
 
             # If a version is extracted, add it as a property
             if ($null -ne $version) {
-                $semVersion = [semver]$version
+                $versionObject = [version]$version
                 # If MinimumVersion is provided, filter releases by version
-                if ($MinimumVersion -and ($semVersion -lt $MinimumVersion)) {
+                if ($MinimumVersion -and ($versionObject -lt $MinimumVersion)) {
                     continue
                 }
 
-                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue $semVersion -Force
+                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue $versionObject -Force
             }
 
             if ($matched) {                

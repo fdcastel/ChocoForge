@@ -3,9 +3,9 @@ Import-Module "$PSScriptRoot/../ChocoForge.psd1" -Force
 Describe 'Integration' {
     InModuleScope 'ChocoForge' {
         BeforeDiscovery {
-            $missingApiKey = -not $env:GITHUB_API_KEY
+            $missingApiKey = -not $env:APIKEY_GITHUB
             if ($missingApiKey) {
-                Write-Warning 'GITHUB_API_KEY environment variable is not set. Some tests will be skipped.'
+                Write-Warning 'APIKEY_GITHUB environment variable is not set. Some tests will be skipped.'
             }
         }
 
@@ -21,7 +21,7 @@ Describe 'Integration' {
             $packagesPushed = $config.versions |
                 Where-Object { $_.version -in $versionsToTest } |
                     Build-ChocolateyPackage -NuspecPath $nuspecPath |
-                        Publish-ChocolateyPackage -SourceUrl $source.url -ApiKey $env:GITHUB_API_KEY -Force
+                        Publish-ChocolateyPackage -SourceUrl $source.url -ApiKey $env:APIKEY_GITHUB -Force
 
             $packagesPushed | Should -HaveCount 2
         }

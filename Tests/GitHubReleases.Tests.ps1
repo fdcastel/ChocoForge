@@ -1,6 +1,6 @@
 Import-Module "$PSScriptRoot/../ChocoForge.psd1" -Force
 
-Describe 'GitHubReleases' {
+Describe 'GitHubReleases (3-number versions)' {
     InModuleScope 'ChocoForge' {
         BeforeEach {
             Mock Invoke-RestMethod {
@@ -29,7 +29,7 @@ Describe 'GitHubReleases' {
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
                 $r.version -match '^5\.' | Should -Be $true
-                [semver]$r.version -ge [semver]'5.0.0' | Should -Be $true
+                [version]$r.version -ge [version]'5.0.0' | Should -Be $true
             }
         }
 
@@ -42,7 +42,7 @@ Describe 'GitHubReleases' {
             $expanded | Should -Not -BeNullOrEmpty
             foreach ($r in $expanded) {
                 $r.version -match '^5\.' | Should -Be $false
-                [semver]$r.version -lt [semver]'5.0.0' | Should -Be $true
+                [version]$r.version -lt [version]'5.0.0' | Should -Be $true
             }
         }
 
@@ -59,6 +59,69 @@ Describe 'GitHubReleases' {
 
             foreach ($r in $expanded) {
                 $r.assets.Keys | Should -Not -BeNullOrEmpty
+                foreach ($k in $r.assets.Keys) {
+                    $r.assets[$k].PSObject.Properties.Name | Should -Not -Contain 'arch'
+                }
+            }
+        }
+    }
+}
+
+Describe 'GitHubReleases (4-number versions)' {
+    InModuleScope 'ChocoForge' {
+        BeforeEach {
+            Mock Invoke-RestMethod {
+                Get-Content "$PSScriptRoot/assets/firebird-odbc-mocks/github-releases.json" -Raw | ConvertFrom-Json
+            }
+        }
+
+        It 'Returns releases for repository' {
+            $releases = Find-GitHubReleases -RepositoryOwner 'fdcastel' -RepositoryName 'firebird-odbc-driver-repack'
+            $releases | Should -Not -BeNullOrEmpty
+            Write-VerboseMark -Message "Releases retrieved: $($releases.Count)"
+        }
+
+        It 'Expands releases with 4-number versions' {
+            $releases = Find-GitHubReleases -RepositoryOwner 'fdcastel' -RepositoryName 'firebird-odbc-driver-repack'
+            $versionPattern = 'v(\d+\.\d+\.\d+\.\d+)$'
+            $assetsPattern = 'Firebird_ODBC_[\d.]+_(?<arch>[^.]+)\.exe$'
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern
+
+            $expanded | Should -Not -BeNullOrEmpty
+            foreach ($r in $expanded) {
+                $r.version | Should -Not -BeNullOrEmpty
+                # Version should be a version object (not semver)
+                $r.version.GetType().Name | Should -BeIn @('Version', 'SemanticVersion')
+                # Should have 4 numbers
+                $r.version.ToString() -match '^\d+\.\d+\.\d+\.\d+$' | Should -Be $true
+            }
+        }
+
+        It 'Filters releases with 4-number versions by minimum version' {
+            $releases = Find-GitHubReleases -RepositoryOwner 'fdcastel' -RepositoryName 'firebird-odbc-driver-repack'
+            $versionPattern = 'v(\d+\.\d+\.\d+\.\d+)$'
+            $assetsPattern = 'Firebird_ODBC_[\d.]+_(?<arch>[^.]+)\.exe$'
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern -MinimumVersion '3.0.1.0'
+
+            $expanded | Should -Not -BeNullOrEmpty
+            foreach ($r in $expanded) {
+                [version]$r.version -ge [version]'3.0.1.0' | Should -Be $true
+            }
+        }
+
+        It 'Transposes assets by arch property for 4-number versions' {
+            $releases = Find-GitHubReleases -RepositoryOwner 'fdcastel' -RepositoryName 'firebird-odbc-driver-repack'
+            $versionPattern = 'v(\d+\.\d+\.\d+\.\d+)$'
+            $assetsPattern = 'Firebird_ODBC_[\d.]+_(?<arch>[^.]+)\.exe$'
+            $expanded = $releases | Resolve-GitHubReleases -VersionPattern $versionPattern -AssetPattern $assetsPattern -TransposeProperty 'arch'
+
+            $expanded | Should -Not -BeNullOrEmpty
+            
+            foreach ($r in $expanded) {
+                $r.assets.Keys | Should -Not -BeNullOrEmpty
+                $r.assets.Keys | Should -Contain 'x64'
+                $r.assets.Keys | Should -Contain 'Win32'
+                
                 foreach ($k in $r.assets.Keys) {
                     $r.assets[$k].PSObject.Properties.Name | Should -Not -Contain 'arch'
                 }
