@@ -66,7 +66,7 @@ function Build-ForgePackage {
                 Write-VerboseMark "Building package for version: $($selectedVersion.version), revision: $RevisionNumber"
 
                 if ($RevisionNumber) {
-                    $packageVersion = [version]::new($($selectedVersion.version.Major), $($selectedVersion.version.Minor), $($selectedVersion.version.Patch), $RevisionNumber)
+                    $packageVersion = [version]::new($($selectedVersion.version.Major), $($selectedVersion.version.Minor), $($selectedVersion.version.Build), $RevisionNumber)
 
                     # Update selectedVersion object with the updated package version
                     $selectedVersion | Add-Member -MemberType NoteProperty -Name 'version' -Value $packageVersion -Force
