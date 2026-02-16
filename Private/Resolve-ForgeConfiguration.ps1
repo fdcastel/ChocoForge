@@ -104,9 +104,9 @@ function Resolve-ForgeConfiguration {
         if ($null -eq $source.publishedVersions) { $source.publishedVersions = @() }
 
         # Find missing versions: those in allVersions but not in publishedVersions
-        $source.missingVersions = Compare-PublishedVersions -ReleaseVersions @($allVersions.version) -PublishedVersions @($source.publishedVersions)
+        $source.missingVersions = @(Compare-PublishedVersions -ReleaseVersions @($allVersions.version) -PublishedVersions @($source.publishedVersions))
 
-        Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($source.publishedVersions.Count) published versions, $(@($source.missingVersions).Count) missing versions."
+        Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($source.publishedVersions.Count) published versions, $($source.missingVersions.Count) missing versions."
 
         # Resolve API key and publishing status
         Resolve-SourcePublishingStatus -Source $source -SourceName $sourceName
