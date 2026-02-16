@@ -103,6 +103,13 @@ function Build-ChocolateyPackage {
         # Render nuspec file
         $nuspecContent = Get-Content -Raw -LiteralPath $nuspecFull
         $renderedNuspec = Expand-Template -Content $nuspecContent -Context $ctx
+
+        # Auto-inject legal folder into <files> section if legal folder exists but not already referenced
+        if ($hasLegalDir -and $renderedNuspec -match '<files>' -and $renderedNuspec -notmatch 'legal\\') {
+            $renderedNuspec = $renderedNuspec -replace '(</files>)', "    <file src=`"legal\**`" target=`"legal`" />`n  `$1"
+            Write-VerboseMark 'Auto-injected legal folder into nuspec <files> section.'
+        }
+
         $nuspecDest = Join-Path $tempDir ([System.IO.Path]::GetFileName($nuspecFull))
         Set-Content -Path $nuspecDest -Value $renderedNuspec -NoNewline
 
