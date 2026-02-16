@@ -4,64 +4,54 @@ function Resolve-GitHubReleases {
         Adds a 'version' property to each GitHub release object and optionally filters and transforms assets.
 
     .DESCRIPTION
-        Processes an array of GitHub release objects (from Find-GitHubReleases), extracting a version from each release using a regex pattern or script block. 
-        
-        Optionally filters releases by minimum version. 
-        
-        If an asset pattern is provided, only matching assets are included and named capture groups are added as properties. 
-        
+        Processes an array of GitHub release objects (from Find-GitHubReleases), extracting a version from each release
+        using a regex pattern.
+
+        Optionally filters releases by minimum version.
+
+        If an asset pattern is provided, only matching assets are included and named capture groups are added as properties.
+
         If a transpose property is specified, the assets array is converted to a hashtable keyed by that property.
 
     .PARAMETER InputObject
         The array of release objects to process (output of Find-GitHubReleases).
 
     .PARAMETER VersionPattern
-        Optional. Regex pattern with a capture group to extract the version from tag_name. If both VersionPattern and VersionScriptBlock are provided, VersionPattern is used for matching and VersionScriptBlock for formatting the version string.
-
-    .PARAMETER VersionScriptBlock
-        Optional. Script block to construct the version string from $Matches after a successful pattern match. Used only if VersionPattern is provided and matches.
+        Regex pattern with a capture group to extract the version from tag_name.
 
     .PARAMETER MinimumVersion
-        Optional. Only releases with version greater than or equal to this value are included. Requires either VersionPattern or VersionScriptBlock.
+        Optional. Only releases with version greater than or equal to this value are included.
 
     .PARAMETER AssetPattern
-        Optional. Regex pattern with named capture groups to extract asset attributes. Only assets matching the pattern are included, and named groups are added as properties.
+        Optional. Regex pattern with named capture groups to extract asset attributes. Only assets matching the pattern
+        are included, and named groups are added as properties.
 
     .PARAMETER TransposeProperty
-        Optional. If provided, the assets array is converted to a hashtable keyed by this property, and the key property is removed from each asset object in the output.
+        Optional. If provided, the assets array is converted to a hashtable keyed by this property, and the key property
+        is removed from each asset object in the output.
 
     .EXAMPLE
-        $expanded = Find-GitHubReleases ... | Resolve-GitHubReleases -VersionPattern 'T(\d+)_(\d+)_(\d+)' -VersionScriptBlock { "$($Matches[1]).$($Matches[2]).$($Matches[3])" } -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\\d.]+-\\d+-(?<platform>[^-]+)-(?<arch>[^-]+)(-(?<debug>withDebugSymbols))?\\.(?!zip$)[^.]+$' -TransposeProperty 'arch'
+        $expanded = Find-GitHubReleases ... | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -MinimumVersion '4.0.0' -AssetPattern 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$' -TransposeProperty 'arch'
 
     .OUTPUTS
         PSCustomObject[]
         An array of release objects with added version and asset properties, optionally filtered and transformed.
     #>
-    [CmdletBinding(DefaultParameterSetName = 'NoVersion')]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'NoVersion')]
-        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionPattern')]
-        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = 'VersionScriptBlock')]
+        [Parameter(Mandatory, ValueFromPipeline)]
         [object]$InputObject,
 
-        [Parameter(ParameterSetName = 'VersionPattern')]
+        [Parameter()]
         [string]$VersionPattern,
 
-        [Parameter(ParameterSetName = 'VersionScriptBlock')]
-        [scriptblock]$VersionScriptBlock,
-
-        [Parameter(ParameterSetName = 'VersionPattern')]
-        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [Parameter()]
         [version]$MinimumVersion,
 
-        [Parameter(ParameterSetName = 'NoVersion')]
-        [Parameter(ParameterSetName = 'VersionPattern')]
-        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [Parameter()]
         [string]$AssetPattern,
 
-        [Parameter(ParameterSetName = 'NoVersion')]
-        [Parameter(ParameterSetName = 'VersionPattern')]
-        [Parameter(ParameterSetName = 'VersionScriptBlock')]
+        [Parameter()]
         [string]$TransposeProperty
     )
 
@@ -70,11 +60,8 @@ function Resolve-GitHubReleases {
         foreach ($release in $InputObject) {
             $version = $null
             $matched = $true
-            
-            if ($PSBoundParameters.ContainsKey('OptionalScript')) {
-                $version = & $VersionScriptBlock
-                $matched = $null -ne $version
-            } elseif ($VersionPattern) {
+
+            if ($VersionPattern) {
                 $matched = $release.tag_name -match $VersionPattern
                 $version = $matched ? $Matches[1] : $null
             }
@@ -128,7 +115,7 @@ function Resolve-GitHubReleases {
                     $ht = @{}
                     foreach ($g in $grouped) {
                         $asset = $g.Group[0].PSObject.Copy()
-                        $asset.PSObject.Properties.Remove('arch')
+                        $asset.PSObject.Properties.Remove($TransposeProperty)
                         $ht[$($g.Name)] = $asset
                     }
                     $ht

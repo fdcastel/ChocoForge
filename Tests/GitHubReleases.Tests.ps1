@@ -15,8 +15,7 @@ Describe 'GitHubReleases (3-number versions)' {
 
         It 'Filters Firebird releases by tag_name regex' {
             $releases = Find-GitHubReleases -RepositoryOwner 'FirebirdSQL' -RepositoryName 'firebird'
-            $filter = @{ tag_name = @{ op = 'match'; value = '^R3' } }
-            $filtered = Select-ObjectLike -InputObject $releases -Filter $filter
+            $filtered = $releases | Where-Object { $_.tag_name -match '^R3' }
             $filtered | Should -HaveCount 6
         }
 
