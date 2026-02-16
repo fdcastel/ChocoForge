@@ -5,8 +5,8 @@ releases:
   flavors:
     # At least one flavor must be defined.
     current:
-      - versionPattern: 'v(\d+\.\d+\.\d+)$' # Must be a valid Regex. Required
-      - assetsPattern: '.zip$' # Must be a valid Regex. May have a maximum of one capture group. Required.
+      versionPattern: 'v(\d+\.\d+\.\d+)$'
+      assetsPattern: '.zip$'
 
 sources:
   community:

@@ -62,17 +62,26 @@ function Read-ForgeConfiguration {
     if (-not $config.releases.flavors -or $config.releases.flavors.Count -eq 0) {
         throw "At least one 'releases.flavors' entry is required."
     }
-    foreach ($flavorName in $config.releases.flavors.Keys) {
+    foreach ($flavorName in @($config.releases.flavors.Keys)) {
         $flavor = $config.releases.flavors[$flavorName]
-        $patterns = @{}
-        foreach ($item in $flavor) {
-            if ($item.versionPattern) { $patterns.versionPattern = $item.versionPattern }
-            if ($item.assetsPattern) { $patterns.assetsPattern = $item.assetsPattern }
+
+        # Normalize v1 format (array of single-key dicts) to v2 format (flat dictionary)
+        if ($flavor -is [System.Collections.IList]) {
+            Write-VerboseMark "Normalizing v1 flavor format for '$flavorName'."
+            $normalized = [ordered]@{}
+            foreach ($item in $flavor) {
+                foreach ($key in $item.Keys) {
+                    $normalized[$key] = $item[$key]
+                }
+            }
+            $config.releases.flavors[$flavorName] = $normalized
+            $flavor = $normalized
         }
-        if (-not $patterns.versionPattern) {
+
+        if (-not $flavor.versionPattern) {
             throw "Flavor '$flavorName' is missing 'versionPattern'."
         }
-        if (-not $patterns.assetsPattern) {
+        if (-not $flavor.assetsPattern) {
             throw "Flavor '$flavorName' is missing 'assetsPattern'."
         }
     }

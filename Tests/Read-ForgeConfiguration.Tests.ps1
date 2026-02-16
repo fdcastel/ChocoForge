@@ -176,5 +176,61 @@ sources:
             Set-Content -Path $path -Value $yaml
             { Read-ForgeConfiguration -Path $path } | Should -Throw "*missing 'apiKey'*"
         }
+
+        It 'Loads v2 format (plain object flavors) correctly' {
+            $configPath = "$PSScriptRoot/assets/v2-format-package/test-v2.forge.yaml"
+            $config = Read-ForgeConfiguration -Path $configPath
+
+            $config | Should -Not -BeNullOrEmpty
+            $config.package | Should -Be 'test-v2'
+            $config.releases.flavors.current.versionPattern | Should -Be 'v(\d+\.\d+\.\d+)$'
+            $config.releases.flavors.current.assetsPattern | Should -Be '\.zip$'
+            $config.releases.flavors.current.minimumVersion | Should -Be '9.0.0'
+        }
+
+        It 'Normalizes v1 format (array-of-dicts) to flat dictionary' {
+            $yaml = @'
+package: test
+releases:
+  source: https://github.com/owner/repo
+  flavors:
+    current:
+      - versionPattern: 'v(\d+\.\d+\.\d+)$'
+      - assetsPattern: '\.zip$'
+      - minimumVersion: 1.0.0
+sources:
+  github:
+    url: https://nuget.pkg.github.com/owner/index.json
+    apiKey: ${APIKEY}
+'@
+            $path = Join-Path $script:tempDir 'v1-format.forge.yaml'
+            Set-Content -Path $path -Value $yaml
+            $config = Read-ForgeConfiguration -Path $path
+
+            # After normalization, flavor should be a dictionary, not an array
+            $flavor = $config.releases.flavors.current
+            $flavor | Should -Not -BeOfType [System.Collections.IList]
+            $flavor.versionPattern | Should -Be 'v(\d+\.\d+\.\d+)$'
+            $flavor.assetsPattern | Should -Be '\.zip$'
+            $flavor.minimumVersion | Should -Be '1.0.0'
+        }
+
+        It 'Validates v2 format missing versionPattern' {
+            $yaml = @'
+package: test
+releases:
+  source: https://github.com/owner/repo
+  flavors:
+    current:
+      assetsPattern: '\.zip$'
+sources:
+  github:
+    url: https://nuget.pkg.github.com/owner/index.json
+    apiKey: ${APIKEY}
+'@
+            $path = Join-Path $script:tempDir 'v2-no-version-pattern.forge.yaml'
+            Set-Content -Path $path -Value $yaml
+            { Read-ForgeConfiguration -Path $path } | Should -Throw "*missing 'versionPattern'*"
+        }
     }
 }
