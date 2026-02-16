@@ -67,6 +67,9 @@ function Find-ChocolateyPublishedVersions {
 
     # Parse output: lines like 'git|2.44.0'
     $lines = $result.StdOut -split "`n" | Where-Object { $_ -match '\|' }
+    if (-not $lines) {
+        return @()
+    }
     $versions = foreach ($line in $lines) {
         $parts = $line -split '\|'
         [version]$parts[1].Trim()
