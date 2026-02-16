@@ -1,0 +1,16 @@
+package: test-revisions
+
+releases:
+  source: https://github.com/fdcastel/qemu-img-windows-x64
+  flavors:
+    current:
+      versionPattern: 'v(\d+\.\d+\.\d+)$'
+      assetsPattern: '\.zip$'
+      revisions:
+        '10.0.0': 2
+        '9.2.0': 1
+
+sources:
+  github:
+    url: https://nuget.pkg.github.com/fdcastel/index.json
+    apiKey: ${APIKEY_GITHUB}

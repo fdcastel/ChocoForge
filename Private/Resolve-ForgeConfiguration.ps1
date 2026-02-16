@@ -66,6 +66,20 @@ function Resolve-ForgeConfiguration {
         }
 
         $versions = Resolve-GitHubReleases @resolveParameters
+        
+        # Apply revision overrides from flavor configuration
+        if ($flavor.revisions) {
+            foreach ($ver in $versions) {
+                $versionKey = "$($ver.version.Major).$($ver.version.Minor).$($ver.version.Build)"
+                if ($flavor.revisions.Contains($versionKey)) {
+                    $rev = [int]$flavor.revisions[$versionKey]
+                    $newVersion = [version]::new($ver.version.Major, $ver.version.Minor, $ver.version.Build, $rev)
+                    $ver | Add-Member -NotePropertyName 'version' -NotePropertyValue $newVersion -Force
+                    Write-VerboseMark "Applied revision override: $versionKey -> $newVersion"
+                }
+            }
+        }
+
         $allVersions += $versions | Add-Member -MemberType NoteProperty -Name 'flavor' -Value $flavorName -PassThru
     }
 
