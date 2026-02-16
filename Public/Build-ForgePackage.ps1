@@ -72,7 +72,15 @@ function Build-ForgePackage {
                     $selectedVersion | Add-Member -MemberType NoteProperty -Name 'version' -Value $packageVersion -Force
                 }
 
-                $packageBuiltPath = $selectedVersion | Build-ChocolateyPackage -NuspecPath $nuspecPath -Verbose:$VerbosePreference
+                $buildArgs = @{
+                    NuspecPath = $nuspecPath
+                    Verbose    = $VerbosePreference
+                }
+                if ($script:config.releases.embed) {
+                    $buildArgs['Embed'] = $true
+                }
+
+                $packageBuiltPath = $selectedVersion | Build-ChocolateyPackage @buildArgs
                 if (-not $packageBuiltPath) {
                     throw "Failed to build the Chocolatey package for version '$($selectedVersion.version)'."
                 }

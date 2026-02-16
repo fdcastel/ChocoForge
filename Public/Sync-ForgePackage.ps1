@@ -39,9 +39,16 @@ function Sync-ForgePackage {
         $nuspecPath = $Path -replace '.forge.yaml$', '.nuspec'
         Write-VerboseMark "Nuspec path resolved: $($nuspecPath)"
 
+        $buildArgs = @{
+            NuspecPath = $nuspecPath
+        }
+        if ($config.releases.embed) {
+            $buildArgs['Embed'] = $true
+        }
+
         $packagesBuilt = $config.versions |
             Where-Object { $allVersionsToPublish -contains $_.version } |
-                Build-ChocolateyPackage -NuspecPath $nuspecPath
+                Build-ChocolateyPackage @buildArgs
         if (-not $packagesBuilt) {
             throw 'Unexpected return: No packages were built.'
         }

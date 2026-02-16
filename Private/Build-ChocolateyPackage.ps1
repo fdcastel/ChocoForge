@@ -22,6 +22,11 @@ function Build-ChocolateyPackage {
     .PARAMETER OutputPath
         Optional. Directory where the resulting .nupkg file will be placed. If not specified, the package is created in a temporary directory.
 
+    .PARAMETER Embed
+        Optional switch. When specified, downloads each asset's browser_download_url into the tools directory
+        of the package, embedding the installer in the .nupkg. Useful for Chocolatey packages that include
+        the installer directly instead of downloading at install time.
+
     .EXAMPLE
         Build-ChocolateyPackage -Context $ctx -NuspecPath 'Samples/firebird.nuspec' -OutputPath 'out/'
 
@@ -31,6 +36,11 @@ function Build-ChocolateyPackage {
         $contexts | Build-ChocolateyPackage -NuspecPath 'Samples/firebird.nuspec'
 
         Builds packages for each context object in the pipeline, using the specified nuspec file.
+
+    .EXAMPLE
+        $contexts | Build-ChocolateyPackage -NuspecPath 'app.nuspec' -Embed
+
+        Builds packages with embedded installers downloaded into the tools directory.
 
     .OUTPUTS
         System.String. The path to the created .nupkg file for each context object.
@@ -46,7 +56,9 @@ function Build-ChocolateyPackage {
         [Parameter(Mandatory)]
         [string]$NuspecPath,
 
-        [string]$OutputPath
+        [string]$OutputPath,
+
+        [switch]$Embed
     )
 
     begin {
@@ -61,6 +73,9 @@ function Build-ChocolateyPackage {
         if (-not (Test-Path $toolsDir)) {
             throw "Expected 'tools' folder not found: $toolsDir"
         }
+        $legalDir = Join-Path $srcDir 'legal'
+        $hasLegalDir = Test-Path $legalDir
+        Write-VerboseMark "Legal folder $(if ($hasLegalDir) { 'found' } else { 'not found' }) at: $legalDir"
     }
 
     process {
@@ -101,6 +116,51 @@ function Build-ChocolateyPackage {
             $content = Get-Content -Raw -LiteralPath $file.FullName
             $rendered = Expand-Template -Content $content -Context $ctx
             Set-Content -Path $destPath -Value $rendered -NoNewline
+        }
+
+        # Render and copy legal folder if it exists (e.g., VERIFICATION.txt)
+        if ($hasLegalDir) {
+            $srcLegalFiles = Get-ChildItem -Path $legalDir -Recurse -File
+            foreach ($file in $srcLegalFiles) {
+                $relPath = $file.FullName.Substring($legalDir.Length).TrimStart('/', '\')
+                $destPath = Join-Path $tempDir (Join-Path 'legal' $relPath)
+                $destDir = Split-Path -Parent $destPath
+                New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+                $content = Get-Content -Raw -LiteralPath $file.FullName
+                $rendered = Expand-Template -Content $content -Context $ctx
+                Set-Content -Path $destPath -Value $rendered -NoNewline
+            }
+            Write-VerboseMark "Copied and rendered legal folder for version $versionStr."
+        }
+
+        # Embed assets: download each asset's browser_download_url into tools/
+        if ($Embed) {
+            $assetsList = @()
+            if ($ctx.PSObject.Properties['assets']) {
+                $assetsObj = $ctx.assets
+                if ($assetsObj -is [System.Collections.IDictionary]) {
+                    # Transposed assets (keyed by arch/platform)
+                    foreach ($key in $assetsObj.Keys) {
+                        $assetsList += $assetsObj[$key]
+                    }
+                } elseif ($assetsObj -is [System.Collections.IEnumerable]) {
+                    # Array of assets
+                    $assetsList = @($assetsObj)
+                } else {
+                    # Single asset object
+                    $assetsList = @($assetsObj)
+                }
+            }
+
+            $destToolsDir = Join-Path $tempDir 'tools'
+            foreach ($asset in $assetsList) {
+                if ($asset.browser_download_url) {
+                    $fileName = Split-Path $asset.browser_download_url -Leaf
+                    $destFile = Join-Path $destToolsDir $fileName
+                    Write-VerboseMark "Embedding asset: $fileName"
+                    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $destFile -UseBasicParsing -Verbose:$false
+                }
+            }
         }
 
         # Prepare choco pack args

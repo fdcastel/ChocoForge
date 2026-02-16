@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>test-embed</id>
+    <version>{{version}}</version>
+    <owners>test</owners>
+    <title>Test Embed Package</title>
+    <authors>Test</authors>
+    <projectUrl>https://example.com</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>test</tags>
+    <summary>Test package for embedded installer</summary>
+    <description>Test package for embedded installer support.</description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+    <file src="legal\**" target="legal" />
+  </files>
+</package>

@@ -1,0 +1,15 @@
+package: test-embed
+
+releases:
+  source: https://github.com/fdcastel/qemu-img-windows-x64
+  embed: true
+  flavors:
+    current:
+      versionPattern: 'v(\d+\.\d+\.\d+)$'
+      assetsPattern: '\.zip$'
+      minimumVersion: 10.0.0
+
+sources:
+  github:
+    url: https://nuget.pkg.github.com/fdcastel/index.json
+    apiKey: ${APIKEY_GITHUB}
