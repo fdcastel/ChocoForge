@@ -92,6 +92,53 @@ Describe 'Embedded Installer Support' {
             $toolsFiles = Get-ChildItem (Join-Path $extractDir 'tools') -File
             $toolsFiles.Count | Should -BeGreaterThan 1
 
+            # .zip assets should NOT have .ignore files
+            $ignoreFiles = Get-ChildItem (Join-Path $extractDir 'tools') -Filter '*.ignore' -File
+            $ignoreFiles.Count | Should -Be 0
+
+            Remove-Item -Recurse -Force $extractDir
+        }
+
+        It 'Creates .ignore files for embedded .exe assets to prevent shimming' {
+            $configPath = "$PSScriptRoot/assets/embed-package/test-embed.forge.yaml"
+            $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
+
+            $nuspecPath = "$PSScriptRoot/assets/embed-package/test-embed.nuspec"
+
+            # Take the first version's context and override assets with .exe URLs
+            $ctx = $config.versions | Select-Object -First 1
+            $ctx | Add-Member -NotePropertyName 'assets' -NotePropertyValue @{
+                x64   = [PSCustomObject]@{ browser_download_url = 'https://example.com/Installer_x64.exe'; sha256 = 'abc123' }
+                Win32 = [PSCustomObject]@{ browser_download_url = 'https://example.com/Installer_Win32.exe'; sha256 = 'def456' }
+            } -Force
+
+            # Mock Invoke-WebRequest to create dummy .exe files
+            Mock Invoke-WebRequest {
+                Set-Content -Path $OutFile -Value 'dummy-exe-content'
+            }
+
+            $packageBuilt = $ctx | Build-ChocolateyPackage -NuspecPath $nuspecPath -Embed
+
+            $packageBuilt | Should -Not -BeNullOrEmpty
+
+            # Extract the package
+            $extractDir = Join-Path $env:TEMP 'chocoforge-embed-test-ignore'
+            if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+            Expand-Archive -Path $packageBuilt -DestinationPath $extractDir -Force
+
+            $toolsDir = Join-Path $extractDir 'tools'
+
+            # Both .exe files should exist
+            Test-Path (Join-Path $toolsDir 'Installer_x64.exe') | Should -Be $true
+            Test-Path (Join-Path $toolsDir 'Installer_Win32.exe') | Should -Be $true
+
+            # Both .ignore files should exist
+            Test-Path (Join-Path $toolsDir 'Installer_x64.exe.ignore') | Should -Be $true
+            Test-Path (Join-Path $toolsDir 'Installer_Win32.exe.ignore') | Should -Be $true
+
+            # No .ignore file for non-.exe files (e.g., the install script)
+            Test-Path (Join-Path $toolsDir 'chocolateyInstall.ps1.ignore') | Should -Be $false
+
             Remove-Item -Recurse -Force $extractDir
         }
     }

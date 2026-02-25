@@ -166,6 +166,13 @@ function Build-ChocolateyPackage {
                     $destFile = Join-Path $destToolsDir $fileName
                     Write-VerboseMark "Embedding asset: $fileName"
                     Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $destFile -UseBasicParsing -Verbose:$false
+
+                    # Create .ignore file for .exe assets to prevent Chocolatey shimming
+                    if ($fileName -like '*.exe') {
+                        $ignoreFile = "$destFile.ignore"
+                        Set-Content -Path $ignoreFile -Value ''
+                        Write-VerboseMark "Created shim ignore file: $fileName.ignore"
+                    }
                 }
             }
         }
