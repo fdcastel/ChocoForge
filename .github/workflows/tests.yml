@@ -1,0 +1,69 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name powershell-yaml -Force -Scope CurrentUser
+          Install-Module -Name Pester -MinimumVersion 5.5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Show tool versions
+        shell: pwsh
+        run: |
+          "PowerShell : $($PSVersionTable.PSVersion)"
+          "Pester     : $((Get-Module -ListAvailable Pester | Sort-Object Version -Descending | Select-Object -First 1).Version)"
+          "Chocolatey : $(choco --version)"
+
+      - name: Run tests
+        shell: pwsh
+        env:
+          # Find-GitHubReleases reads GITHUB_ACCESS_TOKEN. Without it the GitHub API is called
+          # anonymously at 60 requests/hour, shared across all runners on the same egress IP.
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          #
+          # APIKEY_GITHUB / APIKEY_GITLAB / APIKEY_CHOCOLATEY are deliberately NOT set here.
+          # Tests/Integration.Tests.ps1 publishes real packages when they are present, so leaving
+          # them unset keeps this workflow hermetic. Never add them: a push to
+          # community.chocolatey.org cannot be undone.
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module Pester -MinimumVersion 5.5.0
+
+          $config = New-PesterConfiguration
+          $config.Run.Path = './Tests'
+          $config.Run.PassThru = $true
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = 'testResults.xml'
+
+          $result = Invoke-Pester -Configuration $config
+
+          "Total=$($result.TotalCount) Passed=$($result.PassedCount) Failed=$($result.FailedCount) Skipped=$($result.SkippedCount)"
+          if ($result.FailedCount -gt 0) {
+              throw "$($result.FailedCount) test(s) failed."
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: testResults.xml
+          if-no-files-found: warn
