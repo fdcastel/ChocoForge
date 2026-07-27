@@ -1,13 +1,22 @@
-# This shell is PowerShell 7.5
+# This shell is PowerShell 7
 
 - use `pwsh` as shell
 - Command separator is ';', not '&&'.
 - Use `./tmp` folder for any temporary files or scripts you need. This folder is on `.gitignore`.
 
-# This project code is for Windows PowerShell 7.5
+# This project code is for Windows PowerShell 7
 
-- You don't need to keep backwards compatibility with Windows PowerShell 5.1.
+- The manifest requires PowerShell 7.4 or later. You don't need to keep backwards compatibility with Windows PowerShell 5.1.
 - Keep one function per file, unless the functions are closely related.
+
+
+# Tests
+
+- Run with `Invoke-Pester ./Tests`. CI runs the same suite on every push and pull request.
+- `Tests/Integration.Tests.ps1` publishes real packages when `APIKEY_GITHUB` / `APIKEY_GITLAB` are set,
+  and skips when they are not. Load them from `./tmp/env.ps1` to run the full suite.
+- Never set `APIKEY_CHOCOLATEY` when running tests, and never point a test at
+  `community.chocolatey.org`: pushes there are permanent and cannot be deleted.
 
 
 ## About strings

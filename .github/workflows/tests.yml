@@ -1,9 +1,14 @@
 name: Tests
 
 on:
+  # Branches only. A tag push is covered by publish.yml, which calls this workflow
+  # via workflow_call, so listing tags here would run the suite twice.
   push:
+    branches:
+      - '**'
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

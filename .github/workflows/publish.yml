@@ -8,8 +8,16 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  # Publishing to the PowerShell Gallery cannot be undone, so the suite has to pass first.
+  test:
+    uses: ./.github/workflows/tests.yml
+
   publish:
+    needs: test
     runs-on: windows-latest
     steps:
       - name: Checkout repository

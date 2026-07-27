@@ -59,17 +59,23 @@ package: your-package-name
 
 releases:
   source: https://github.com/owner/repo
+  embed: false               # optional - ship the installer inside the package
   flavors:
     flavor-name:
-      - versionPattern: 'regex-pattern'
-      - assetsPattern: 'regex-pattern'
-      - minimumVersion: 1.0.0  # optional
+      versionPattern: 'regex-pattern'
+      assetsPattern: 'regex-pattern'
+      minimumVersion: 1.0.0  # optional
+      revisions:             # optional - republish a version as X.Y.Z.<n>
+        '1.2.3': 1
 
 sources:
   source-name:
     url: https://nuget-source-url
     apiKey: ${ENV_VAR_NAME}
+    username: your-username  # required for GitLab only
 ```
+
+Each command reads this file from `-Path`, or discovers a single `.forge.yaml` in the current directory when `-Path` is omitted.
 
 ### `package`
 
@@ -109,7 +115,7 @@ Each flavor consists of:
 ```yaml
 flavors:
   current:
-    - versionPattern: 'v(5\.\d+\.\d+)$'
+    versionPattern: 'v(5\.\d+\.\d+)$'
 ```
 
 **Example tag matching:**
@@ -123,7 +129,7 @@ flavors:
 ```yaml
 flavors:
   current:
-    - assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
+    assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
 ```
 
 **Named Capture Groups:** You can use named capture groups (e.g., `(?<arch>...)`) to extract properties from asset filenames. These become available as template variables.
@@ -159,15 +165,34 @@ $url32 = '{{assets.x86.browser_download_url}}'
 ```yaml
 flavors:
   v3:
-    - versionPattern: 'v(3\.\d+\.\d+)$'
-    - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
-    - minimumVersion: 3.0.10
+    versionPattern: 'v(3\.\d+\.\d+)$'
+    assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+    minimumVersion: 3.0.10
 ```
 
 This is useful for:
 - Skipping very old releases that may have issues
 - Starting package maintenance from a known-good version
 - Avoiding republishing old versions unnecessarily
+
+##### `revisions`
+
+**Optional.** A map of version → revision number, used to republish a version whose package content changed.
+
+Chocolatey does not allow re-pushing an existing version. When an install script needs fixing, the package must be republished under a new version, so a fourth segment is appended:
+
+```yaml
+flavors:
+  current:
+    versionPattern: 'v(5\.\d+\.\d+)$'
+    assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
+    revisions:
+      '5.0.3': 1    # publish upstream 5.0.3 as package 5.0.3.1
+```
+
+Upstream release `5.0.3` is then built and published as `5.0.3.1`. Versions absent from the map keep their three-part number. Quote the keys — YAML would otherwise read `5.0.3` as something other than a string.
+
+For a one-off build without editing the configuration, use `Build-ForgePackage -RevisionNumber` instead.
 
 **Example:** Multiple flavors for different major versions:
 
@@ -176,16 +201,65 @@ releases:
   source: https://github.com/FirebirdSQL/firebird
   flavors:
     current:
-      - versionPattern: 'v(5\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
+      versionPattern: 'v(5\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
     v4:
-      - versionPattern: 'v(4\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+      versionPattern: 'v(4\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
     v3:
-      - versionPattern: 'v(3\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
-      - minimumVersion: 3.0.10
+      versionPattern: 'v(3\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+      minimumVersion: 3.0.10
 ```
+
+#### `releases.embed`
+
+**Optional.** Defaults to `false`. When `true`, each matched asset is downloaded into the package's `tools/` folder at build time, so the installer ships inside the `.nupkg` instead of being fetched during installation.
+
+```yaml
+releases:
+  source: https://github.com/owner/repo
+  embed: true
+  flavors:
+    current:
+      versionPattern: 'v(\d+\.\d+\.\d+)$'
+      assetsPattern: '\.exe$'
+```
+
+Notes:
+
+- An `.ignore` file is created alongside every embedded `.exe`, so Chocolatey does not generate shims for it.
+- Install scripts should use `Install-ChocolateyInstallPackage` against the local file rather than `Install-ChocolateyPackage` with a URL.
+- Chocolatey requires a `legal/VERIFICATION.txt` for embedded binaries — see [The `legal` folder](#the-legal-folder).
+- Embedded packages are much larger, and the community repository caps package size.
+
+### The `legal` folder
+
+**Optional.** A `legal/` folder beside the `.nuspec` is copied into the package, with template placeholders expanded, exactly like `tools/`.
+
+```
+myapp.forge.yaml
+myapp.nuspec
+tools/
+  chocolateyInstall.ps1
+legal/
+  VERIFICATION.txt
+```
+
+If the folder exists and the `.nuspec` has a `<files>` section that does not already reference it, an entry is injected automatically — no need to edit the `.nuspec`.
+
+A typical `legal/VERIFICATION.txt`, using the same placeholders as any other template:
+
+```
+VERIFICATION
+
+The binary in this package was downloaded from:
+  {{assets.x64.browser_download_url}}
+
+SHA256: {{assets.x64.sha256}}
+```
+
+Binary files placed in `tools/` or `legal/` are copied byte-for-byte and are not template-expanded.
 
 ### `sources`
 
@@ -249,15 +323,17 @@ releases:
   source: https://github.com/FirebirdSQL/firebird
   flavors:
     current:
-      - versionPattern: 'v(5\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
+      versionPattern: 'v(5\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-[\d.]+-\d+-windows-(?<arch>[^-_.]+)\.exe$'
     v4:
-      - versionPattern: 'v(4\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+      versionPattern: 'v(4\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
     v3:
-      - versionPattern: 'v(3\.\d+\.\d+)$'
-      - assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
-      - minimumVersion: 3.0.10
+      versionPattern: 'v(3\.\d+\.\d+)$'
+      assetsPattern: 'Firebird-\d+\.\d+\.\d+\.\d+[-_]\d+[-_](?<arch>[^-_.]+)\.exe$'
+      minimumVersion: 3.0.10
+      revisions:
+        '3.0.10': 1    # republished as 3.0.10.1 after an install-script fix
 
 sources:
   community:
