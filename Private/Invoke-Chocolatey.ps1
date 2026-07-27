@@ -42,7 +42,11 @@ function Invoke-Chocolatey {
 
     $psi = [System.Diagnostics.ProcessStartInfo]::new()
     $psi.FileName = $chocoExe.Source
-    $psi.Arguments = [string]::Join(' ', $Arguments)
+    # ArgumentList quotes each element individually. Joining into a single string would split
+    # any argument containing a space (for example a nuspec under 'C:/My Packages/').
+    foreach ($argument in $Arguments) {
+        $psi.ArgumentList.Add($argument)
+    }
     $psi.UseShellExecute = $false
     $psi.RedirectStandardInput = $true
     $psi.RedirectStandardOutput = $true

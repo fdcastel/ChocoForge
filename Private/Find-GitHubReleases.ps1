@@ -34,7 +34,9 @@ function Find-GitHubReleases {
         [string]$RepositoryName
     )
 
-    $uri = "https://api.github.com/repos/$($RepositoryOwner)/$($RepositoryName)/releases"
+    # GitHub pages releases at 30 per request by default. Ask for the maximum page size and
+    # follow rel="next" links, otherwise repositories with many releases are silently truncated.
+    $uri = "https://api.github.com/repos/$($RepositoryOwner)/$($RepositoryName)/releases?per_page=100"
     Write-VerboseMark -Message "Querying GitHub API for releases: $uri"
 
     try {
@@ -47,10 +49,12 @@ function Find-GitHubReleases {
             $headers['Authorization'] = "Bearer $githubAccessToken"
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Verbose:$false
-        Write-VerboseMark -Message "- Received $($response.Count) releases from GitHub API."
+        # -FollowRelLink yields one array per page; flatten them into a single release list.
+        $response = Invoke-RestMethod -Uri $uri -Headers $headers -FollowRelLink -Verbose:$false
+        $releases = @($response | ForEach-Object { $_ })
+        Write-VerboseMark -Message "- Received $($releases.Count) releases from GitHub API."
 
-        $result = $response | Select-Object @(
+        $result = $releases | Select-Object @(
             'html_url',
             'tag_name',
             'name',

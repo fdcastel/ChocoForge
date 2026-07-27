@@ -1,0 +1,24 @@
+# Configuration for the Sync-ForgePackage end-to-end integration test.
+#
+# It deliberately lists ONLY sources that can be published to and then cleaned up again.
+# https://community.chocolatey.org is intentionally absent: pushes there are permanent and
+# cannot be deleted, so no automated test may ever target it. Do not add it here.
+
+package: qemu-img
+
+releases:
+  source: https://github.com/fdcastel/qemu-img-windows-x64
+  flavors:
+    current:
+      versionPattern: 'v(\d+\.\d+\.\d+)$'
+      assetsPattern: '.zip$'
+      minimumVersion: 10.0.0
+
+sources:
+  github:
+    url: https://nuget.pkg.github.com/fdcastel/index.json
+    apiKey: ${APIKEY_GITHUB}
+  gitlab:
+    url: https://gitlab.com/api/v4/projects/70655681/packages/nuget/index.json
+    username: fdcastel
+    apiKey: ${APIKEY_GITLAB}

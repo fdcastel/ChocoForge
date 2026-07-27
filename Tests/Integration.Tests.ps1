@@ -144,13 +144,51 @@ Describe 'Integration: Full Sync-ForgePackage E2E' {
             }
         }
 
-        It 'Syncs a package to GitHub and GitLab (skipping Chocolatey)' -Skip:$skipSync {
-            # Use the tmp/chocolatey-packages qemu-img which has all 3 sources configured
-            # But APIKEY_CHOCOLATEY is not set, so Chocolatey source will be skipped
-            $forgePath = "$PSScriptRoot/../tmp/chocolatey-packages/qemu-img/qemu-img.forge.yaml"
-            
-            # Sync should succeed — Chocolatey will be skipped, GitHub and GitLab will be synced
+        It 'Syncs a package to GitHub and GitLab' -Skip:$skipSync {
+            # This asset lists only GitHub and GitLab - both allow deleting a published version.
+            # It must never reference community.chocolatey.org: pushes there are irreversible,
+            # and relying on APIKEY_CHOCOLATEY being unset is not a safeguard.
+            $forgePath = "$PSScriptRoot/assets/qemu-img-e2e/qemu-img.forge.yaml"
+
+            $config = Read-ForgeConfiguration -Path $forgePath
+            $config.sources.Keys | Should -Not -Contain 'community'
+            foreach ($name in $config.sources.Keys) {
+                $config.sources[$name].url | Should -Not -Match 'community\.chocolatey\.org'
+            }
+
             { Sync-ForgePackage -Path $forgePath -Verbose } | Should -Not -Throw
+
+            # Both sources should now hold every resolved version.
+            $resolved = Read-ForgeConfiguration -Path $forgePath | Resolve-ForgeConfiguration
+            foreach ($name in $resolved.sources.Keys) {
+                $resolved.sources[$name].missingVersions | Should -BeNullOrEmpty
+            }
+
+            # Clean up so the test stays repeatable and leaves nothing behind.
+            foreach ($version in $resolved.versions.version) {
+                $versionText = $version.ToString()
+
+                $ghHeaders = @{ 'Authorization' = "Bearer $($env:APIKEY_GITHUB)" }
+                $ghVersionsUrl = 'https://api.github.com/users/fdcastel/packages/nuget/qemu-img/versions'
+                # Assign before piping: piping Invoke-RestMethod directly passes the whole JSON
+                # array as a single pipeline item, so Where-Object would match the array itself.
+                $ghVersions = Invoke-RestMethod -Uri $ghVersionsUrl -Headers $ghHeaders -Verbose:$false
+                $ghId = @($ghVersions | Where-Object { $_.name -eq $versionText })[0].id
+                if ($ghId) {
+                    $null = Invoke-RestMethod -Uri "$ghVersionsUrl/$ghId" -Headers $ghHeaders -Method Delete -Verbose:$false
+                    Write-VerboseMark "Cleaned up GitHub Packages qemu-img $versionText."
+                }
+
+                $glHeaders = @{ 'PRIVATE-TOKEN' = $env:APIKEY_GITLAB }
+                $glProjectId = '70655681'
+                $glPackages = Invoke-RestMethod -Headers $glHeaders -Verbose:$false `
+                    -Uri "https://gitlab.com/api/v4/projects/$glProjectId/packages?package_type=nuget&package_name=qemu-img"
+                foreach ($pkg in @($glPackages | Where-Object { $_.version -eq $versionText })) {
+                    $null = Invoke-RestMethod -Method Delete -Headers $glHeaders -Verbose:$false `
+                        -Uri "https://gitlab.com/api/v4/projects/$glProjectId/packages/$($pkg.id)"
+                    Write-VerboseMark "Cleaned up GitLab qemu-img $versionText."
+                }
+            }
         }
     }
 }

@@ -8,6 +8,10 @@ function Resolve-SourceCredentials {
         the appropriate authentication parameters. GitHub uses the owner from the URL as username.
         GitLab requires a username in the source configuration.
 
+        When the API key environment variable is not set, an empty hashtable is returned rather
+        than throwing, so that a configuration can still be inspected with only some tokens present.
+        A GitLab source with no configured username does throw, because that is a configuration error.
+
     .PARAMETER Source
         The source configuration object containing url, apiKey, and optionally username.
 
@@ -34,20 +38,25 @@ function Resolve-SourceCredentials {
         $userName = ($Source.url -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
         $password = Expand-EnvironmentVariables $Source.apiKey
         if (-not $password) {
-            throw "GitHub source '$SourceName' requires the environment variable $($Source.apiKey) to be set."
+            # A missing token is not fatal: the caller reports the source as unqueryable so that
+            # the other sources can still be inspected. Resolve-SourcePublishingStatus records why.
+            Write-VerboseMark "GitHub source '$SourceName' has no usable API key. Returning empty credentials."
+            return $credentials
         }
         $credentials['User'] = $userName
         $credentials['Password'] = $password
         Write-VerboseMark "Resolved GitHub credentials for source '$SourceName' (user: $userName)."
     } elseif ($Source.url.StartsWith('https://gitlab.com')) {
-        # GitLab: username must be in the configuration
+        # GitLab: username must be in the configuration. Unlike a missing token, this is a
+        # configuration error the user must fix, so it still throws.
         $userName = $Source.username
         if (-not $userName) {
             throw "GitLab source '$SourceName' requires a username to be set in the configuration."
         }
         $password = Expand-EnvironmentVariables $Source.apiKey
         if (-not $password) {
-            throw "GitLab source '$SourceName' requires the environment variable $($Source.apiKey) to be set."
+            Write-VerboseMark "GitLab source '$SourceName' has no usable API key. Returning empty credentials."
+            return $credentials
         }
         $credentials['User'] = $userName
         $credentials['Password'] = $password

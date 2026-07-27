@@ -56,6 +56,9 @@ function Publish-ChocolateyPackage {
             throw "Package file not found: $Path"
         }
 
+        # Derived once so every failure path can name the package, not just the force-push branch.
+        $packageName, $version = ([System.IO.Path]::GetFileNameWithoutExtension($Path)).Split('.', 2)
+
         if ($SourceUrl.StartsWith('https://community.chocolatey.org')) {
             # Chocolatey community repository uses different push url.
             $SourceUrl = 'https://push.chocolatey.org'
@@ -81,7 +84,6 @@ function Publish-ChocolateyPackage {
                 throw 'Force push not supported for this source.'
             }
 
-            $packageName, $version = ([System.IO.Path]::GetFileNameWithoutExtension($Path)).Split('.', 2)
             $owner = ($SourceUrl -replace '^https://nuget.pkg.github.com/', '') -replace '/.*', ''
 
             $headers = @{ 'Authorization' = "Bearer $ApiKey" }

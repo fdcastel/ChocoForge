@@ -62,10 +62,11 @@ function Build-ChocolateyPackage {
     )
 
     begin {
-        $nuspecFull = (Resolve-Path -LiteralPath $NuspecPath).Path
-        if (-not (Test-Path $nuspecFull)) {
-            throw "Nuspec file not found: $nuspecFull"
+        # Test first: Resolve-Path throws a less helpful error of its own on a missing path.
+        if (-not (Test-Path -LiteralPath $NuspecPath)) {
+            throw "Nuspec file not found: $NuspecPath"
         }
+        $nuspecFull = (Resolve-Path -LiteralPath $NuspecPath).Path
 
         $nuspecBase = [System.IO.Path]::GetFileNameWithoutExtension($nuspecFull)
         $srcDir = Split-Path -Parent $nuspecFull
@@ -113,31 +114,32 @@ function Build-ChocolateyPackage {
         $nuspecDest = Join-Path $tempDir ([System.IO.Path]::GetFileName($nuspecFull))
         Set-Content -Path $nuspecDest -Value $renderedNuspec -NoNewline
 
-        # Render and copy tools folder recursively
-        $srcToolsFiles = Get-ChildItem -Path $toolsDir -Recurse -File
-        foreach ($file in $srcToolsFiles) {
-            $relPath = $file.FullName.Substring($toolsDir.Length).TrimStart('/', '\')
-            $destPath = Join-Path $tempDir (Join-Path 'tools' $relPath)
-            $destDir = Split-Path -Parent $destPath
-            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-            $content = Get-Content -Raw -LiteralPath $file.FullName
-            $rendered = Expand-Template -Content $content -Context $ctx
-            Set-Content -Path $destPath -Value $rendered -NoNewline
+        # Render and copy the tools folder, and the legal folder when present (e.g. VERIFICATION.txt)
+        $foldersToRender = [ordered]@{ 'tools' = $toolsDir }
+        if ($hasLegalDir) {
+            $foldersToRender['legal'] = $legalDir
         }
 
-        # Render and copy legal folder if it exists (e.g., VERIFICATION.txt)
-        if ($hasLegalDir) {
-            $srcLegalFiles = Get-ChildItem -Path $legalDir -Recurse -File
-            foreach ($file in $srcLegalFiles) {
-                $relPath = $file.FullName.Substring($legalDir.Length).TrimStart('/', '\')
-                $destPath = Join-Path $tempDir (Join-Path 'legal' $relPath)
+        foreach ($folderName in $foldersToRender.Keys) {
+            $srcDirectory = $foldersToRender[$folderName]
+            foreach ($file in Get-ChildItem -Path $srcDirectory -Recurse -File) {
+                $relPath = $file.FullName.Substring($srcDirectory.Length).TrimStart('/', '\')
+                $destPath = Join-Path $tempDir (Join-Path $folderName $relPath)
                 $destDir = Split-Path -Parent $destPath
                 New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-                $content = Get-Content -Raw -LiteralPath $file.FullName
-                $rendered = Expand-Template -Content $content -Context $ctx
-                Set-Content -Path $destPath -Value $rendered -NoNewline
+
+                # Template expansion is a text round-trip, which would replace every byte that is
+                # not valid UTF-8 with U+FFFD. Binaries (installers, archives) are copied verbatim.
+                if (Test-TextFile -Path $file.FullName) {
+                    $content = Get-Content -Raw -LiteralPath $file.FullName
+                    $rendered = Expand-Template -Content $content -Context $ctx
+                    Set-Content -Path $destPath -Value $rendered -NoNewline
+                } else {
+                    Write-VerboseMark "Copying binary file without template expansion: $($relPath)"
+                    Copy-Item -LiteralPath $file.FullName -Destination $destPath -Force
+                }
             }
-            Write-VerboseMark "Copied and rendered legal folder for version $versionStr."
+            Write-VerboseMark "Copied and rendered '$folderName' folder for version $versionStr."
         }
 
         # Embed assets: download each asset's browser_download_url into tools/

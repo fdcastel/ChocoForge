@@ -66,6 +66,59 @@ Describe 'GitHubReleases (3-number versions)' {
     }
 }
 
+Describe 'GitHubReleases (pagination)' {
+    InModuleScope 'ChocoForge' {
+        It 'Requests a large page size so a single page covers most repositories' {
+            Mock Invoke-RestMethod { @() }
+            $null = Find-GitHubReleases -RepositoryOwner 'owner' -RepositoryName 'repo'
+
+            Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
+                $Uri -match 'per_page=100'
+            }
+        }
+
+        It 'Follows rel="next" links' {
+            Mock Invoke-RestMethod { @() }
+            $null = Find-GitHubReleases -RepositoryOwner 'owner' -RepositoryName 'repo'
+
+            Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
+                $FollowRelLink.IsPresent
+            }
+        }
+
+        It 'Flattens releases from every returned page' {
+            # -FollowRelLink yields one array per page; all pages must survive.
+            Mock Invoke-RestMethod {
+                @(
+                    @(
+                        [PSCustomObject]@{ tag_name = 'v2.0.0'; name = 'p1a'; html_url = 'u'; prerelease = $false; published_at = 'x'; assets = @() },
+                        [PSCustomObject]@{ tag_name = 'v1.9.0'; name = 'p1b'; html_url = 'u'; prerelease = $false; published_at = 'x'; assets = @() }
+                    ),
+                    @(
+                        [PSCustomObject]@{ tag_name = 'v1.8.0'; name = 'p2a'; html_url = 'u'; prerelease = $false; published_at = 'x'; assets = @() }
+                    )
+                )
+            }
+
+            $releases = Find-GitHubReleases -RepositoryOwner 'owner' -RepositoryName 'repo'
+
+            $releases | Should -HaveCount 3
+            $releases.tag_name | Should -Contain 'v1.8.0'
+        }
+
+        It 'Still works when a single flat page is returned' {
+            Mock Invoke-RestMethod {
+                @(
+                    [PSCustomObject]@{ tag_name = 'v1.0.0'; name = 'a'; html_url = 'u'; prerelease = $false; published_at = 'x'; assets = @() }
+                )
+            }
+
+            $releases = Find-GitHubReleases -RepositoryOwner 'owner' -RepositoryName 'repo'
+            $releases | Should -HaveCount 1
+        }
+    }
+}
+
 Describe 'GitHubReleases (4-number versions)' {
     InModuleScope 'ChocoForge' {
         BeforeEach {

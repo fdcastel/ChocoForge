@@ -21,9 +21,7 @@ foreach ($import in @($Public + $Private)) {
 # Export public functions
 Export-ModuleMember -Function $Public.BaseName
 
-# Check for required modules
-if (-not (Get-Module -ListAvailable -Name 'powershell-yaml')) {
-    Write-Warning "Required module 'powershell-yaml' is not installed. Please install it using: Install-Module powershell-yaml"
-}
+# A missing powershell-yaml is already fatal: the #Requires above and the manifest's
+# RequiredModules both abort the import before any code here could warn about it.
 
 Write-Verbose 'ChocoForge module loaded.'

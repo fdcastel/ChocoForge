@@ -46,6 +46,21 @@ Describe 'Expand-EnvironmentVariables' {
             }
         }
 
+        It 'Returns null when only some variables are set (no partial expansion)' {
+            # A partially expanded string is truthy and would be accepted as a valid API key.
+            $env:TEST_CF_SET = 'value'
+            try {
+                Remove-Item env:TEST_CF_UNSET -ErrorAction SilentlyContinue
+                $result = Expand-EnvironmentVariables -InputString 'prefix-${TEST_CF_UNSET}'
+                $result | Should -BeNullOrEmpty
+
+                $result2 = Expand-EnvironmentVariables -InputString '${TEST_CF_SET}-${TEST_CF_UNSET}'
+                $result2 | Should -BeNullOrEmpty
+            } finally {
+                Remove-Item env:TEST_CF_SET -ErrorAction SilentlyContinue
+            }
+        }
+
         It 'Does not expand variables without braces' {
             $env:TEST_CF_NO = 'value'
             try {

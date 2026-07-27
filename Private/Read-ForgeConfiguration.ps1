@@ -17,33 +17,55 @@ function Read-ForgeConfiguration {
         - At least one 'sources' entry (each must have 'url' and 'apiKey')
 
     .PARAMETER Path
-        Path to the YAML configuration file. If not provided, the function will search for a single .forge.yaml file in the current directory.
+        Path to the YAML configuration file, or to a directory containing exactly one .forge.yaml file.
+        Defaults to the current directory. Throws if a directory contains no .forge.yaml file, or more than one.
 
     .EXAMPLE
         Read-ForgeConfiguration -Path 'Samples/firebird.forge.yaml'
-        
+
         Loads and validates the specified configuration file.
 
     .EXAMPLE
         Read-ForgeConfiguration
-        
+
         Auto-discovers and loads a .forge.yaml file in the current directory if only one exists.
 
     .OUTPUTS
         PSCustomObject
-        The parsed and validated configuration object.
+        The parsed and validated configuration object, with a 'configurationPath' property holding
+        the full path of the file that was actually read.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [string]$Path
+        [Parameter(Position = 0)]
+        [string]$Path = '.'
     )
+
+    if (-not $Path) { $Path = '.' }
 
     if (-not (Test-Path $Path)) {
         throw "YAML configuration file not found: $Path"
     }
-    Write-VerboseMark "Using configuration file: $($Path)"
-    $config = ConvertFrom-Yaml (Get-Content -Raw -LiteralPath $Path) -Ordered
+
+    # A directory (including the default '.') means: discover the single .forge.yaml inside it.
+    if (Test-Path -LiteralPath $Path -PathType Container) {
+        $candidates = @(Get-ChildItem -LiteralPath $Path -Filter '*.forge.yaml' -File | Sort-Object Name)
+        $directory = (Resolve-Path -LiteralPath $Path).Path
+
+        if ($candidates.Count -eq 0) {
+            throw "No .forge.yaml file found in '$directory'."
+        }
+        if ($candidates.Count -gt 1) {
+            throw "Multiple .forge.yaml files found in '$directory': $($candidates.Name -join ', '). Specify one with -Path."
+        }
+
+        $Path = $candidates[0].FullName
+        Write-VerboseMark "Discovered configuration file: $($Path)"
+    }
+
+    $configurationPath = (Resolve-Path -LiteralPath $Path).Path
+    Write-VerboseMark "Using configuration file: $($configurationPath)"
+    $config = ConvertFrom-Yaml (Get-Content -Raw -LiteralPath $configurationPath) -Ordered
 
     # Validate 'package'
     if (-not $config.package) {
@@ -99,6 +121,10 @@ function Read-ForgeConfiguration {
             throw "Source '$sourceName' is missing 'apiKey'."
         }
     }
+
+    # Callers derive sibling paths (the .nuspec, tools/, legal/) from the file we actually read,
+    # which is not necessarily the -Path they passed.
+    $config | Add-Member -MemberType NoteProperty -Name 'configurationPath' -Value $configurationPath -Force
 
     Write-VerboseMark -Message 'YAML configuration validated successfully.'
     return $config

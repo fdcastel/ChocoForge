@@ -8,7 +8,7 @@
     Returns the full path of each built package.
 
 .PARAMETER Path
-    Path to the forge.yaml file. Defaults to the current directory.
+    Path to the .forge.yaml file, or to a directory containing exactly one. Defaults to the current directory.
 
 .PARAMETER Version
     One or more versions to build. Must match versions available in the configuration.
@@ -42,9 +42,11 @@ function Build-ForgePackage {
 
     begin {
         Write-VerboseMark 'Reading Forge configuration.'
-        $script:config = Read-ForgeConfiguration -Path $Path | Resolve-ForgeConfiguration
+        # begin and process share the function scope, so plain locals suffice here. Using
+        # $script: would put this state in module scope, where it would outlive the call.
+        $config = Read-ForgeConfiguration -Path $Path | Resolve-ForgeConfiguration
 
-        $script:availableVersions = $script:config.Versions
+        $availableVersions = $config.Versions
         Write-VerboseMark "Available versions: $($availableVersions.version -join ', ')"
 
         foreach ($ver in $Version) {
@@ -54,8 +56,7 @@ function Build-ForgePackage {
             }
         }
 
-        $script:nuspecPath = $Path -replace '.forge.yaml$', '.nuspec'
-        Write-VerboseMark "Nuspec path resolved: $($nuspecPath)"
+        $nuspecPath = Resolve-ForgeNuspecPath -ConfigurationPath $config.configurationPath
     }
 
     process {
@@ -76,7 +77,7 @@ function Build-ForgePackage {
                     NuspecPath = $nuspecPath
                     Verbose    = $VerbosePreference
                 }
-                if ($script:config.releases.embed) {
+                if ($config.releases.embed) {
                     $buildArgs['Embed'] = $true
                 }
 

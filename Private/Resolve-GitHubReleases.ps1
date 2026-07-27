@@ -55,6 +55,14 @@ function Resolve-GitHubReleases {
         [string]$TransposeProperty
     )
 
+    begin {
+        # The named capture groups depend only on the pattern, so extract them once.
+        $namedGroups = @()
+        if ($AssetPattern) {
+            $namedGroups = [regex]::Matches($AssetPattern, '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') | ForEach-Object { $_.Groups[1].Value }
+        }
+    }
+
     process {
         $result = @()
         foreach ($release in $InputObject) {
@@ -66,6 +74,11 @@ function Resolve-GitHubReleases {
                 $version = $matched ? $Matches[1] : $null
             }
 
+            # Callers share one set of release objects across every flavor, so this function
+            # must never write to them: filtering assets for flavor A would otherwise strip
+            # the assets flavor B needs. Work on copies throughout.
+            $releaseCopy = $release.PSObject.Copy()
+
             # If a version is extracted, add it as a property
             if ($null -ne $version) {
                 $versionObject = [version]$version
@@ -74,10 +87,10 @@ function Resolve-GitHubReleases {
                     continue
                 }
 
-                $release | Add-Member -NotePropertyName 'version' -NotePropertyValue $versionObject -Force
+                $releaseCopy | Add-Member -NotePropertyName 'version' -NotePropertyValue $versionObject -Force
             }
 
-            if ($matched) {                
+            if ($matched) {
                 # Asset attribute extraction using named capture groups
                 #   If -AssetPattern is provided, only keep assets that match the pattern
                 #   For each asset, if the name matches, add all named capture groups as properties
@@ -85,24 +98,24 @@ function Resolve-GitHubReleases {
                     $filteredAssets = @()
                     foreach ($asset in $release.assets) {
                         if ($asset.name -match $AssetPattern) {
-                            # Extract named capture groups and add them as properties
-                            $namedGroups = [regex]::Matches($AssetPattern, '\(\?<([a-zA-Z_][a-zA-Z0-9_]*)>') | ForEach-Object { $_.Groups[1].Value }
+                            # Copy before annotating: the asset objects are shared too.
+                            $assetCopy = $asset.PSObject.Copy()
                             foreach ($key in $namedGroups) {
                                 $value = if ($Matches.ContainsKey($key)) { $Matches[$key] } else { $null }
-                                $asset | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force
+                                $assetCopy | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force
                             }
-                            $filteredAssets += $asset
+                            $filteredAssets += $assetCopy
                         }
                         # If the asset does not match, it is excluded
                     }
-                    $release.assets = $filteredAssets
+                    $releaseCopy.assets = $filteredAssets
 
                     if ($filteredAssets.Count -eq 0) {
                         Write-Warning "Release '$($release.tag_name)' has no assets matching the pattern '$AssetPattern' (AssetPattern too strict?)"
                         continue
                     }
                 }
-                $result += $release
+                $result += $releaseCopy
             }
         }
 

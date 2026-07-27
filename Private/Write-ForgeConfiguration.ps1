@@ -40,7 +40,10 @@ function Write-ForgeConfiguration {
             Write-Host "$sourceName" -ForegroundColor Cyan -NoNewline
             Write-Host ': ' -ForegroundColor Gray -NoNewline
             
-            if ($source.missingVersions) {
+            if ($null -eq $source.publishedVersions) {
+                # Never queried (no usable credentials) - not the same as "nothing published".
+                Write-Host 'Status unknown (credentials not available)' -ForegroundColor DarkGray -NoNewline
+            } elseif ($source.missingVersions) {
                 if ($Configuration.versions.Count -eq $source.missingVersions.Count) {
                     Write-Host 'Not published on this source' -ForegroundColor DarkGray -NoNewline
                 } else {
@@ -85,6 +88,11 @@ function Write-ForgeConfiguration {
                 Write-Host '    - ' -ForegroundColor Gray -NoNewline
                 Write-Host "$sourceName" -ForegroundColor Cyan -NoNewline
                 Write-Host ': ' -ForegroundColor Gray -NoNewline
+
+                if ($null -eq $source.publishedVersions) {
+                    Write-Host 'Status unknown (credentials not available)' -ForegroundColor DarkGray
+                    continue
+                }
 
                 $flavorSourceVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($source.publishedVersions -contains $_.version) }
                 $flavorSourceMissingVersions = $configuration.versions | Where-Object { ($_.flavor -eq $flavorName) -and ($source.publishedVersions -notcontains $_.version) }

@@ -399,7 +399,7 @@ Get-ForgePackage [[-Path] <String>] [-Passthru]
 
 #### Parameters
 
-- **Path** - Path to the `.forge.yaml` file. If not provided, searches for a single `.forge.yaml` file in the current directory.
+- **Path** - Path to the `.forge.yaml` file, or to a directory containing exactly one. If not provided, searches the current directory. Fails if the directory holds no `.forge.yaml` file, or more than one.
 - **Passthru** - Returns the configuration object instead of displaying it.
 
 #### Examples
@@ -448,7 +448,7 @@ Build-ForgePackage [[-Path] <String>] -Version <version[]> [-RevisionNumber <int
 
 #### Parameters
 
-- **Path** - Path to the `.forge.yaml` file. Defaults to current directory.
+- **Path** - Path to the `.forge.yaml` file, or to a directory containing exactly one. Defaults to the current directory.
 - **Version** - One or more versions to build. Must match versions available in the configuration.
 - **RevisionNumber** - Optional revision number to use as the 4th segment of the package version. Defaults to 0.
 - **WhatIf** - Shows what would happen without actually building.
@@ -503,7 +503,7 @@ Sync-ForgePackage [[-Path] <String>] [-WhatIf] [-Verbose]
 
 #### Parameters
 
-- **Path** - Path to the `.forge.yaml` file. If not provided, searches for a single `.forge.yaml` file in the current directory.
+- **Path** - Path to the `.forge.yaml` file, or to a directory containing exactly one. If not provided, searches the current directory. Fails if the directory holds no `.forge.yaml` file, or more than one.
 - **WhatIf** - Shows what would be published without actually publishing.
 - **Verbose** - Displays detailed processing information.
 
@@ -691,11 +691,18 @@ Check that the version exists in GitHub releases and matches your `versionPatter
 Get-ForgePackage | Select-Object -ExpandProperty versions
 ```
 
-### "No .forge.yaml file found"
+### "No .forge.yaml file found" / "Multiple .forge.yaml files found"
 
-Specify the path explicitly:
+Commands search the current directory for exactly one `.forge.yaml` file. If there is none, or more than one, specify the path explicitly:
 ```powershell
 Get-ForgePackage -Path 'C:\path\to\package.forge.yaml'
+```
+
+### "Status unknown (credentials not available)"
+
+The source needs an API key to be queried, and its environment variable is not set. Other sources are still reported normally. Set the variable to include that source:
+```powershell
+$env:APIKEY_GITHUB = 'your-token'
 ```
 
 ### SHA256 checksums taking too long

@@ -7,7 +7,7 @@ function Sync-ForgePackage {
         Reads and resolves a ChocoForge YAML configuration file using Read-ForgeConfiguration and Resolve-ForgeConfiguration. For each source, builds and publishes any missing package versions, skipping sources with a skipReason. Provides verbose output for all major steps and displays a summary of published and skipped sources. Throws on unexpected errors or if no packages are built when expected.
 
     .PARAMETER Path
-        Path to the YAML configuration file. If not provided, auto-discovery is handled by Read-ForgeConfiguration.
+        Path to the .forge.yaml file, or to a directory containing exactly one. Defaults to the current directory.
 
     .EXAMPLE
         Sync-ForgePackage -Path 'Samples/firebird.forge.yaml'
@@ -36,8 +36,7 @@ function Sync-ForgePackage {
     if ($allVersionsToPublish) {
         Write-VerboseMark "Building packages for versions: $($allVersionsToPublish -join ', ')"
         
-        $nuspecPath = $Path -replace '.forge.yaml$', '.nuspec'
-        Write-VerboseMark "Nuspec path resolved: $($nuspecPath)"
+        $nuspecPath = Resolve-ForgeNuspecPath -ConfigurationPath $config.configurationPath
 
         $buildArgs = @{
             NuspecPath = $nuspecPath

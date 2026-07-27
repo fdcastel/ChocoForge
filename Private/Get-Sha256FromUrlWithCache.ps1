@@ -24,14 +24,8 @@ function Get-Sha256FromUrlWithCache {
     $cache = @{}
     if (Test-Path $cachePath) {
         try {
-            $rawCache = Get-Content $cachePath -Raw | ConvertFrom-Json
-            if ($rawCache -is [System.Collections.IDictionary]) {
-                foreach ($k in $rawCache.PSObject.Properties.Name) { $cache[$k] = $rawCache.$k }
-            } elseif ($rawCache -is [PSCustomObject]) {
-                foreach ($k in $rawCache.PSObject.Properties.Name) { $cache[$k] = $rawCache.$k }
-            } else {
-                $cache = @{}
-            }
+            $cache = Get-Content $cachePath -Raw | ConvertFrom-Json -AsHashtable
+            if ($null -eq $cache) { $cache = @{} }
         } catch {
             Write-VerboseMark 'Failed to read or parse cache file. Starting with empty cache.'
             $cache = @{}
@@ -63,6 +57,19 @@ function Get-Sha256FromUrlWithCache {
     Remove-Item -Path $tempDir -Recurse -Force
 
     $cache[$cacheKey] = @{ sha256 = $sha256; timestamp = $now.ToString('o') }
+
+    # Drop stale entries so the cache file does not grow without bound.
+    foreach ($key in @($cache.Keys)) {
+        if ($key -eq $cacheKey) { continue }
+        try {
+            if (($now - (Get-Date $cache[$key].timestamp)) -ge [TimeSpan]::FromHours(24)) {
+                $cache.Remove($key)
+            }
+        } catch {
+            $cache.Remove($key)   # unparseable entry
+        }
+    }
+
     try {
         $cache | ConvertTo-Json -Depth 5 | Set-Content -Path $cachePath -Force
         Write-VerboseMark "Wrote SHA256 to cache for $url."

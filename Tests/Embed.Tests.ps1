@@ -99,6 +99,39 @@ Describe 'Embedded Installer Support' {
             Remove-Item -Recurse -Force $extractDir
         }
 
+        It 'Copies binary files in tools/ through the build byte-for-byte' {
+            # Template expansion is a text round-trip; binaries must bypass it entirely.
+            $srcDir = Join-Path $env:TEMP 'chocoforge-binary-test-src'
+            if (Test-Path $srcDir) { Remove-Item -Recurse -Force $srcDir }
+            New-Item -ItemType Directory -Path (Join-Path $srcDir 'tools') -Force | Out-Null
+
+            Copy-Item "$PSScriptRoot/assets/embed-package/test-embed.nuspec" (Join-Path $srcDir 'test-embed.nuspec')
+            Copy-Item "$PSScriptRoot/assets/embed-package/tools/chocolateyInstall.ps1" (Join-Path $srcDir 'tools/chocolateyInstall.ps1')
+            # The nuspec declares a legal\** file entry, so the folder has to be present.
+            Copy-Item "$PSScriptRoot/assets/embed-package/legal" (Join-Path $srcDir 'legal') -Recurse
+
+            # Bytes that are not valid UTF-8; a text round-trip turns each into U+FFFD.
+            $binaryPath = Join-Path $srcDir 'tools/payload.bin'
+            $originalBytes = [byte[]]@(0x4D, 0x5A, 0x90, 0x00, 0xFF, 0xFE, 0x00, 0x01, 0x80, 0xC3, 0xA9)
+            [System.IO.File]::WriteAllBytes($binaryPath, $originalBytes)
+            $originalHash = (Get-FileHash -Path $binaryPath -Algorithm SHA256).Hash
+
+            $ctx = [PSCustomObject]@{ version = [version]'1.0.0' }
+            $packageBuilt = $ctx | Build-ChocolateyPackage -NuspecPath (Join-Path $srcDir 'test-embed.nuspec')
+            $packageBuilt | Should -Not -BeNullOrEmpty
+
+            $extractDir = Join-Path $env:TEMP 'chocoforge-binary-test-out'
+            if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+            Expand-Archive -Path $packageBuilt -DestinationPath $extractDir -Force
+
+            $extractedBinary = Join-Path $extractDir 'tools/payload.bin'
+            Test-Path $extractedBinary | Should -BeTrue
+            (Get-FileHash -Path $extractedBinary -Algorithm SHA256).Hash | Should -Be $originalHash
+            [System.IO.File]::ReadAllBytes($extractedBinary).Count | Should -Be $originalBytes.Count
+
+            Remove-Item -Recurse -Force $srcDir, $extractDir
+        }
+
         It 'Creates .ignore files for embedded .exe assets to prevent shimming' {
             $configPath = "$PSScriptRoot/assets/embed-package/test-embed.forge.yaml"
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration

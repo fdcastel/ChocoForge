@@ -160,3 +160,58 @@ Describe 'Resolve-GitHubReleases (unit tests)' {
         }
     }
 }
+
+Describe 'Resolve-GitHubReleases (does not mutate its input)' {
+    InModuleScope 'ChocoForge' {
+        BeforeEach {
+            # A single release carrying assets that two different flavors would each want.
+            $script:shared = @(
+                [PSCustomObject]@{
+                    tag_name     = 'v1.0.0'
+                    name         = 'Release 1.0.0'
+                    html_url     = 'https://example.com'
+                    prerelease   = $false
+                    published_at = '2025-01-01T00:00:00Z'
+                    assets       = @(
+                        [PSCustomObject]@{ name = 'app-x64.exe'; size = 1; digest = $null; browser_download_url = 'https://example.com/app-x64.exe' },
+                        [PSCustomObject]@{ name = 'app-x64.zip'; size = 2; digest = $null; browser_download_url = 'https://example.com/app-x64.zip' }
+                    )
+                }
+            )
+        }
+
+        It 'leaves the caller assets array untouched' {
+            $null = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.exe$'
+            $script:shared[0].assets | Should -HaveCount 2
+        }
+
+        It 'does not add named capture groups to the caller asset objects' {
+            $null = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern 'app-(?<arch>x64)\.exe$'
+            $script:shared[0].assets[0].PSObject.Properties.Name | Should -Not -Contain 'arch'
+        }
+
+        It 'returns copies, not the input objects' {
+            $result = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.exe$'
+            [object]::ReferenceEquals($result, $script:shared[0]) | Should -BeFalse
+        }
+
+        It 'lets two flavors over the same release each keep their own assets' {
+            $exeFlavor = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.exe$'
+            $zipFlavor = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.zip$'
+
+            $exeFlavor.assets.name | Should -Be 'app-x64.exe'
+            $zipFlavor.assets.name | Should -Be 'app-x64.zip'
+        }
+
+        It 'does not retroactively empty a result already returned to an earlier caller' {
+            $exeFlavor = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.exe$'
+            $exeFlavor.assets.name | Should -Be 'app-x64.exe'
+
+            # A later, unrelated flavor must not reach back into the earlier result.
+            $null = $script:shared | Resolve-GitHubReleases -VersionPattern 'v(\d+\.\d+\.\d+)$' -AssetPattern '\.zip$'
+
+            $exeFlavor.assets | Should -HaveCount 1
+            $exeFlavor.assets.name | Should -Be 'app-x64.exe'
+        }
+    }
+}

@@ -215,6 +215,61 @@ sources:
             $flavor.minimumVersion | Should -Be '1.0.0'
         }
 
+        It 'Auto-discovers a single .forge.yaml when given a directory' {
+            $dir = Join-Path $script:tempDir 'discovery-one'
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Copy-Item "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml" (Join-Path $dir 'only.forge.yaml')
+
+            $config = Read-ForgeConfiguration -Path $dir
+            $config.package | Should -Be 'qemu-img'
+        }
+
+        It 'Exposes the resolved file path as configurationPath' {
+            $dir = Join-Path $script:tempDir 'discovery-path'
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Copy-Item "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml" (Join-Path $dir 'only.forge.yaml')
+
+            $config = Read-ForgeConfiguration -Path $dir
+            $config.configurationPath | Should -Match 'only\.forge\.yaml$'
+            Test-Path $config.configurationPath | Should -BeTrue
+        }
+
+        It 'Sets configurationPath even when an explicit file is given' {
+            $configPath = "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml"
+            $config = Read-ForgeConfiguration -Path $configPath
+            $config.configurationPath | Should -Match 'qemu-img\.forge\.yaml$'
+        }
+
+        It 'Treats an empty -Path as the current directory' {
+            $dir = Join-Path $script:tempDir 'discovery-empty-path'
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Copy-Item "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml" (Join-Path $dir 'only.forge.yaml')
+
+            Push-Location $dir
+            try {
+                $config = Read-ForgeConfiguration -Path ''
+                $config.package | Should -Be 'qemu-img'
+            } finally {
+                Pop-Location
+            }
+        }
+
+        It 'Throws a helpful error when no .forge.yaml exists in the directory' {
+            $dir = Join-Path $script:tempDir 'discovery-none'
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+
+            { Read-ForgeConfiguration -Path $dir } | Should -Throw '*No .forge.yaml file found*'
+        }
+
+        It 'Throws and names the candidates when several .forge.yaml files exist' {
+            $dir = Join-Path $script:tempDir 'discovery-many'
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Copy-Item "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml" (Join-Path $dir 'alpha.forge.yaml')
+            Copy-Item "$PSScriptRoot/assets/qemu-img-package/qemu-img.forge.yaml" (Join-Path $dir 'beta.forge.yaml')
+
+            { Read-ForgeConfiguration -Path $dir } | Should -Throw '*alpha.forge.yaml*'
+        }
+
         It 'Validates v2 format missing versionPattern' {
             $yaml = @'
 package: test

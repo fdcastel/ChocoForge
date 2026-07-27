@@ -11,7 +11,7 @@ function Get-ForgePackage {
         If -Passthru is specified, returns the configuration object instead. 
 
     .PARAMETER Path
-        Path to the YAML configuration file. If not provided, auto-discovery is handled by Read-ForgeConfiguration.
+        Path to the .forge.yaml file, or to a directory containing exactly one. Defaults to the current directory.
 
     .PARAMETER Passthru
         If specified, returns the resolved configuration object instead of writing it.

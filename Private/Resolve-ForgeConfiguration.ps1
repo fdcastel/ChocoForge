@@ -92,24 +92,36 @@ function Resolve-ForgeConfiguration {
     foreach ($sourceName in $Configuration.sources.Keys) {
         $source = $Configuration.sources[$sourceName]
 
+        # Resolve API key and publishing status first: it determines whether we can query at all.
+        Resolve-SourcePublishingStatus -Source $source -SourceName $sourceName
+
+        $credentials = Resolve-SourceCredentials -Source $source -SourceName $sourceName
+        $requiresCredentials = $source.url.StartsWith('https://nuget.pkg.github.com') -or $source.url.StartsWith('https://gitlab.com')
+
+        if ($requiresCredentials -and $credentials.Count -eq 0) {
+            # No usable token for an authenticated feed. Leave publishedVersions as $null, which
+            # means "not queried" - distinct from @(), which means "queried, nothing published".
+            Write-VerboseMark -Message "Source '$sourceName' cannot be queried without credentials. Publishing status is unknown."
+            $source | Add-Member -MemberType NoteProperty -Name 'publishedVersions' -Value $null -Force
+            $source | Add-Member -MemberType NoteProperty -Name 'missingVersions' -Value @() -Force
+            continue
+        }
+
         $findArguments = @{
             PackageName = $Configuration.package
             SourceUrl   = $source.url
         }
-
-        $credentials = Resolve-SourceCredentials -Source $source -SourceName $sourceName
         $findArguments += $credentials
 
-        $source.publishedVersions = Find-ChocolateyPublishedVersions @findArguments
-        if ($null -eq $source.publishedVersions) { $source.publishedVersions = @() }
+        $publishedVersions = @(Find-ChocolateyPublishedVersions @findArguments)
 
         # Find missing versions: those in allVersions but not in publishedVersions
-        $source.missingVersions = @(Compare-PublishedVersions -ReleaseVersions @($allVersions.version) -PublishedVersions @($source.publishedVersions))
+        $missingVersions = @(Compare-PublishedVersions -ReleaseVersions @($allVersions.version) -PublishedVersions $publishedVersions)
 
-        Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($source.publishedVersions.Count) published versions, $($source.missingVersions.Count) missing versions."
+        $source | Add-Member -MemberType NoteProperty -Name 'publishedVersions' -Value $publishedVersions -Force
+        $source | Add-Member -MemberType NoteProperty -Name 'missingVersions' -Value $missingVersions -Force
 
-        # Resolve API key and publishing status
-        Resolve-SourcePublishingStatus -Source $source -SourceName $sourceName
+        Write-VerboseMark -Message "Queried source '$sourceName' for package info. Found $($publishedVersions.Count) published versions, $($missingVersions.Count) missing versions."
     }
 
     Write-VerboseMark -Message 'Resolve-ForgeConfiguration completed.'
