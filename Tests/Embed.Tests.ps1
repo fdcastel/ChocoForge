@@ -120,12 +120,22 @@ Describe 'Embedded Installer Support' {
             $packageBuilt = $ctx | Build-ChocolateyPackage -NuspecPath (Join-Path $srcDir 'test-embed.nuspec')
             $packageBuilt | Should -Not -BeNullOrEmpty
 
+            # List what the .nupkg really holds, so a packaging change reports the contents
+            # rather than a bare "expected True".
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($packageBuilt)
+            try {
+                $entries = @($archive.Entries | ForEach-Object { $_.FullName })
+            } finally {
+                $archive.Dispose()
+            }
+
             $extractDir = Join-Path $env:TEMP 'chocoforge-binary-test-out'
             if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
             Expand-Archive -Path $packageBuilt -DestinationPath $extractDir -Force
 
             $extractedBinary = Join-Path $extractDir 'tools/payload.bin'
-            Test-Path $extractedBinary | Should -BeTrue
+            Test-Path $extractedBinary | Should -BeTrue -Because "the package should contain tools/payload.bin; it holds: $($entries -join ', ')"
             (Get-FileHash -Path $extractedBinary -Algorithm SHA256).Hash | Should -Be $originalHash
             [System.IO.File]::ReadAllBytes($extractedBinary).Count | Should -Be $originalBytes.Count
 
