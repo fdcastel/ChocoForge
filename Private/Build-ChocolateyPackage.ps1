@@ -121,9 +121,13 @@ function Build-ChocolateyPackage {
         }
 
         foreach ($folderName in $foldersToRender.Keys) {
-            $srcDirectory = $foldersToRender[$folderName]
-            foreach ($file in Get-ChildItem -Path $srcDirectory -Recurse -File) {
-                $relPath = $file.FullName.Substring($srcDirectory.Length).TrimStart('/', '\')
+            # Canonicalise first: Get-ChildItem reports resolved paths, so if the caller supplied a
+            # path in another form - an 8.3 short name such as the C:/Users/RUNNER~1/... that
+            # $env:TEMP uses on CI runners - a character offset would slice mid-name and place
+            # files under a bogus subdirectory (tools/ols/... instead of tools/...).
+            $srcDirectory = (Resolve-Path -LiteralPath $foldersToRender[$folderName]).Path
+            foreach ($file in Get-ChildItem -LiteralPath $srcDirectory -Recurse -File) {
+                $relPath = [System.IO.Path]::GetRelativePath($srcDirectory, $file.FullName)
                 $destPath = Join-Path $tempDir (Join-Path $folderName $relPath)
                 $destDir = Split-Path -Parent $destPath
                 New-Item -ItemType Directory -Path $destDir -Force | Out-Null

@@ -142,6 +142,40 @@ Describe 'Embedded Installer Support' {
             Remove-Item -Recurse -Force $srcDir, $extractDir
         }
 
+        It 'Places files correctly when the source path is an 8.3 short name' {
+            # Get-ChildItem reports canonical paths. If the relative path were computed by
+            # character offset against a caller-supplied short path, entries would land under a
+            # truncated folder name (tools/ols/...), which is what $env:TEMP does on CI runners.
+            $srcDir = Join-Path $env:TEMP 'ChocoForge ShortName Test'
+            if (Test-Path -LiteralPath $srcDir) { Remove-Item -LiteralPath $srcDir -Recurse -Force }
+            New-Item -ItemType Directory -Path (Join-Path $srcDir 'tools') -Force | Out-Null
+
+            Copy-Item "$PSScriptRoot/assets/embed-package/test-embed.nuspec" (Join-Path $srcDir 'test-embed.nuspec')
+            Copy-Item "$PSScriptRoot/assets/embed-package/tools/chocolateyInstall.ps1" (Join-Path $srcDir 'tools/chocolateyInstall.ps1')
+            Copy-Item "$PSScriptRoot/assets/embed-package/legal" (Join-Path $srcDir 'legal') -Recurse
+
+            # Address the same directory through its 8.3 alias.
+            $fso = New-Object -ComObject Scripting.FileSystemObject
+            $shortDir = $fso.GetFolder($srcDir).ShortPath
+            $shortDir | Should -Not -Be $srcDir -Because 'the probe needs a genuinely different path form'
+
+            $ctx = [PSCustomObject]@{ version = [version]'1.0.0' }
+            $packageBuilt = $ctx | Build-ChocolateyPackage -NuspecPath (Join-Path $shortDir 'test-embed.nuspec')
+
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($packageBuilt)
+            try {
+                $entries = @($archive.Entries | ForEach-Object { $_.FullName })
+            } finally {
+                $archive.Dispose()
+            }
+
+            $entries | Should -Contain 'tools/chocolateyInstall.ps1' -Because "entries were: $($entries -join ', ')"
+            $entries | Should -Contain 'legal/VERIFICATION.txt' -Because "entries were: $($entries -join ', ')"
+
+            Remove-Item -LiteralPath $srcDir -Recurse -Force
+        }
+
         It 'Creates .ignore files for embedded .exe assets to prevent shimming' {
             $configPath = "$PSScriptRoot/assets/embed-package/test-embed.forge.yaml"
             $config = Read-ForgeConfiguration -Path $configPath | Resolve-ForgeConfiguration
